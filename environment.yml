@@ -2,6 +2,7 @@ name: face-recognition-system
 channels:
   - pytorch
   - conda-forge
+  - defaults
 
 dependencies:
   # Python

@@ -17,6 +17,10 @@ RUN apt-get update && apt-get install -y \
 # Configure conda to avoid channel priority issues
 RUN conda config --set channel_priority flexible
 
+# Accept Anaconda Terms of Service
+RUN conda config --set allow_conda_downgrades true && \
+    echo "yes" | conda tos accept
+
 # Set working directory
 WORKDIR /app
 
