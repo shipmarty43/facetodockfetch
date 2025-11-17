@@ -1,0 +1,61 @@
+# Backend GPU Dockerfile - Conda version with CUDA
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+
+# Install system dependencies and miniconda
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpoppler-cpp-dev \
+    poppler-utils \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    wget \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Miniconda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
+    rm /tmp/miniconda.sh && \
+    /opt/conda/bin/conda clean -afy
+
+# Add conda to PATH
+ENV PATH=/opt/conda/bin:$PATH
+
+# Set working directory
+WORKDIR /app
+
+# Copy GPU environment file
+COPY ../environment-gpu.yml environment.yml
+
+# Create conda environment with GPU support
+RUN conda env create -f environment.yml && \
+    conda clean -afy
+
+# Activate environment
+SHELL ["conda", "run", "-n", "face-recognition-system", "/bin/bash", "-c"]
+
+# Verify GPU installation
+RUN python -c "import torch; print(f'PyTorch CUDA available: {torch.cuda.is_available()}'); import fastapi; import insightface; print('Conda GPU environment OK')"
+
+# Copy application code
+COPY ./app ./app
+
+# Create necessary directories
+RUN mkdir -p data/uploads data/db data/cache logs models
+
+# Environment variables for CUDA
+ENV USE_GPU=true
+ENV CUDA_VISIBLE_DEVICES=0
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# Expose port
+EXPOSE 8000
+
+# Run application with conda environment
+CMD ["conda", "run", "--no-capture-output", "-n", "face-recognition-system", \
+     "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
