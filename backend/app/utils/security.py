@@ -1,0 +1,62 @@
+"""Security utilities for encryption and file handling."""
+import hashlib
+from pathlib import Path
+from cryptography.fernet import Fernet
+from ..config import settings
+
+
+def calculate_file_hash(file_path: str) -> str:
+    """Calculate SHA-256 hash of a file."""
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        # Read file in chunks for memory efficiency
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+
+def calculate_string_hash(content: str) -> str:
+    """Calculate SHA-256 hash of a string."""
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
+def get_encryption_key() -> bytes:
+    """Get encryption key for production mode."""
+    if settings.is_production:
+        if not settings.ENCRYPTION_KEY:
+            raise ValueError("ENCRYPTION_KEY must be set in production mode")
+        return settings.ENCRYPTION_KEY.encode()
+    return b"dev-key-not-secure-do-not-use-in-production"
+
+
+def encrypt_data(data: bytes) -> bytes:
+    """Encrypt data using Fernet (AES-256)."""
+    if not settings.is_production:
+        # No encryption in debug mode
+        return data
+
+    key = get_encryption_key()
+    f = Fernet(key)
+    return f.encrypt(data)
+
+
+def decrypt_data(encrypted_data: bytes) -> bytes:
+    """Decrypt data using Fernet."""
+    if not settings.is_production:
+        # No encryption in debug mode
+        return encrypted_data
+
+    key = get_encryption_key()
+    f = Fernet(key)
+    return f.decrypt(encrypted_data)
+
+
+def sanitize_filename(filename: str) -> str:
+    """Sanitize filename to prevent directory traversal attacks."""
+    # Remove path separators and parent directory references
+    filename = Path(filename).name
+    # Remove potentially dangerous characters
+    dangerous_chars = ['..', '/', '\\', '\x00']
+    for char in dangerous_chars:
+        filename = filename.replace(char, '_')
+    return filename
