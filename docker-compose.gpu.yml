@@ -40,8 +40,8 @@ services:
   # Backend - FastAPI application with GPU support
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.gpu
+      context: .
+      dockerfile: backend/Dockerfile.gpu
     container_name: face_recognition_backend
     ports:
       - "8000:8000"
@@ -79,8 +79,8 @@ services:
   # Celery Worker - Async document processing with GPU
   celery_worker:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.gpu
+      context: .
+      dockerfile: backend/Dockerfile.gpu
     container_name: face_recognition_celery
     volumes:
       - ./data/uploads:/app/data/uploads

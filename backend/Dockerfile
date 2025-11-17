@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy environment file
-COPY ../environment.yml .
+COPY environment.yml .
 
 # Create conda environment
 RUN conda env create -f environment.yml && \
@@ -31,7 +31,7 @@ SHELL ["conda", "run", "-n", "face-recognition-system", "/bin/bash", "-c"]
 RUN python -c "import torch; import fastapi; import insightface; print('Conda environment OK')"
 
 # Copy application code
-COPY ./app ./app
+COPY backend/app ./app
 
 # Create necessary directories
 RUN mkdir -p data/uploads data/db data/cache logs models
