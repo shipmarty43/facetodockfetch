@@ -2,6 +2,8 @@
 
 Полнофункциональная система распознавания лиц и анализа документов с использованием OCR (Optical Character Recognition) и биометрической идентификации.
 
+🔗 **Repository:** [https://github.com/shipmarty43/facetodockfetch](https://github.com/shipmarty43/facetodockfetch)
+
 ## Возможности
 
 - **Распознавание лиц**: Высокоточное распознавание лиц с использованием InsightFace (AdaFace/ArcFace)
@@ -22,7 +24,7 @@
 
 ```bash
 # 1. Клонировать репозиторий
-git clone <repository-url>
+git clone https://github.com/shipmarty43/facetodockfetch.git
 cd facetodockfetch
 
 # 2. Создать .env файл
