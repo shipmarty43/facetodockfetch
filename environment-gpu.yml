@@ -63,7 +63,7 @@ dependencies:
 
     # OCR & Document Processing (основные пакеты)
     - surya-ocr>=0.4
-    - python-mrz>=0.6
+    - mrz>=0.6
     - pytesseract>=0.3
 
     # Face Recognition
