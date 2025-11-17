@@ -15,7 +15,6 @@ dependencies:
 
   # Image processing (используются напрямую: PIL, cv2)
   - pillow>=10.0
-  - opencv>=4.8
 
   # Web framework
   - fastapi>=0.104
@@ -53,6 +52,7 @@ dependencies:
     - pydantic-settings>=2.1
 
     # Image Processing extras
+    - opencv-python-headless>=4.8
     - pdf2image>=1.16
 
     # OCR & Document Processing (основные пакеты)

@@ -212,6 +212,40 @@ Swagger UI: http://localhost:8000/docs
 ./scripts/logs.sh gpu backend
 ```
 
+### Тестирование
+
+```bash
+# Быстрая проверка окружения (10 сек)
+python scripts/test_environment.py
+
+# С продвинутым логированием (JSON + HTML отчеты)
+python scripts/test_environment_advanced.py
+
+# Полный набор тестов (pytest)
+pytest
+
+# Тесты с покрытием кода
+pytest --cov=backend/app --cov-report=html
+
+# Только быстрые тесты
+pytest -m "not slow"
+```
+
+📋 **Тесты:**
+- 25 тестов импорта пакетов
+- 15 тестов API endpoints
+- Проверка OpenCV, PyTorch, MRZ
+- Тесты FastAPI приложения
+
+🔍 **Продвинутое логирование:**
+- Текстовые логи: `logs/test_environment_YYYYMMDD_HHMMSS.log`
+- JSON отчеты: `logs/test_environment_YYYYMMDD_HHMMSS.json`
+- HTML отчеты: `logs/test_environment_YYYYMMDD_HHMMSS.html`
+- Метрики производительности
+- Информация о системе
+
+📖 **Документация:** [tests/README.md](tests/README.md)
+
 ### Очистка Docker
 
 ```bash
