@@ -1,5 +1,5 @@
-# Backend Dockerfile
-FROM python:3.10-slim
+# Backend Dockerfile - Conda version
+FROM continuumio/miniconda3:latest
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -17,11 +17,18 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy requirements
-COPY requirements.txt .
+# Copy environment file
+COPY ../environment.yml .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Create conda environment
+RUN conda env create -f environment.yml && \
+    conda clean -afy
+
+# Activate environment
+SHELL ["conda", "run", "-n", "face-recognition-system", "/bin/bash", "-c"]
+
+# Verify installation
+RUN python -c "import torch; import fastapi; import insightface; print('Conda environment OK')"
 
 # Copy application code
 COPY ./app ./app
@@ -32,5 +39,6 @@ RUN mkdir -p data/uploads data/db data/cache logs models
 # Expose port
 EXPOSE 8000
 
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run application with conda environment
+CMD ["conda", "run", "--no-capture-output", "-n", "face-recognition-system", \
+     "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

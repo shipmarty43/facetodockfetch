@@ -1,6 +1,7 @@
 name: face-recognition-system
 channels:
   - pytorch
+  - nvidia
   - conda-forge
   - defaults
 
@@ -8,8 +9,13 @@ dependencies:
   # Python
   - python>=3.10,<3.12
 
-  # ML/AI - от conda для лучшей совместимости
+  # CUDA support
+  - cudatoolkit>=11.8
+  - cudnn>=8.9
+
+  # ML/AI - GPU versions from conda
   - pytorch::pytorch>=2.0
+  - pytorch::pytorch-cuda>=11.8
   - pytorch::torchvision>=0.15
   - numpy>=1.24
   - scikit-learn>=1.3
@@ -73,4 +79,6 @@ dependencies:
 
     # Face Recognition
     - insightface>=0.7
-    - onnxruntime>=1.16
+
+    # GPU-accelerated ONNX Runtime
+    - onnxruntime-gpu>=1.16

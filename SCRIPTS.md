@@ -93,15 +93,19 @@ python scripts/create_admin.py --username admin --password yourpassword
 
 ## Conda управление
 
+> **Преимущества Conda:** Проект использует Conda вместо pip для автоматического управления зависимостями. Conda подтягивает совместимые версии библиотек без жёсткой привязки к конкретным версиям, что упрощает обновление и решение конфликтов зависимостей.
+
 ### Автоматическая установка
 
 ```bash
 # Интерактивная установка
 ./scripts/setup_conda.sh
 
-# Скрипт спросит:
-# - CPU или GPU версию
+# Скрипт:
 # - Определит автоматически наличие NVIDIA GPU
+# - Выберет environment.yml (CPU) или environment-gpu.yml (GPU)
+# - Создаст conda окружение с гибкими версиями зависимостей
+# - Проверит GPU если выбран GPU режим
 ```
 
 ### Запуск сервисов
@@ -175,15 +179,22 @@ Update completed successfully!
 # 1. Git pull
 git pull origin main
 
-# 2. Rebuild контейнеров
+# 2. Rebuild контейнеров (Docker)
 ./scripts/rebuild_containers.sh
 
-# Или для Conda
+# Или для Conda (автоматически обновит зависимости)
+# CPU версия
 conda env update -f environment.yml
-pip install -r backend/requirements.txt --upgrade
+
+# GPU версия
+conda env update -f environment-gpu.yml
+
+# Перезапуск сервисов
 ./scripts/stop_services.sh
 ./scripts/start_services.sh
 ```
+
+**Примечание:** Conda автоматически разрешит совместимые версии при обновлении, без конфликтов зависимостей.
 
 ---
 
@@ -281,15 +292,27 @@ docker-compose down -v
 # Активировать окружение
 conda activate face-recognition-system
 
-# Обновить зависимости
+# Обновить зависимости (CPU)
 conda env update -f environment.yml
+
+# Обновить зависимости (GPU)
+conda env update -f environment-gpu.yml
 
 # Экспорт окружения
 conda env export > environment_backup.yml
 
+# Проверить установленные пакеты
+conda list
+
 # Деактивировать
 conda deactivate
 ```
+
+**Преимущества Conda:**
+- Автоматическое разрешение конфликтов версий
+- Бинарные пакеты (быстрее компиляции pip)
+- Лучшая поддержка ML/AI библиотек
+- Гибкие версии (`>=` вместо `==`)
 
 ### Database
 

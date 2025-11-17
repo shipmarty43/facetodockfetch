@@ -16,6 +16,8 @@
 
 ## Быстрый старт
 
+> **Управление зависимостями:** Проект использует Conda вместо pip для лучшей совместимости библиотек. Conda автоматически подтягивает совместимые версии без жёсткой зависимости от конкретных версий, что упрощает развертывание и обновление.
+
 ### Вариант 1: Docker Compose (CPU)
 
 ```bash
@@ -152,6 +154,7 @@ Swagger UI: http://localhost:8000/docs
 **Frontend:** React, Material-UI, Redux Toolkit, Axios
 **Infrastructure:** Docker, Redis, Elasticsearch, Nginx
 **GPU:** CUDA 11.8, PyTorch, ONNX Runtime GPU
+**Package Management:** Conda (гибкое управление зависимостями, автоматическое разрешение конфликтов версий)
 
 ## Производительность
 

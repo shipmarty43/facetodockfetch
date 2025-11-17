@@ -1,14 +1,8 @@
-# GPU-Enabled Backend Dockerfile
+# Backend GPU Dockerfile - Conda version with CUDA
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
-# Prevent interactive prompts
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install Python and system dependencies
+# Install system dependencies and miniconda
 RUN apt-get update && apt-get install -y \
-    python3.10 \
-    python3-pip \
-    python3.10-dev \
     build-essential \
     libpoppler-cpp-dev \
     poppler-utils \
@@ -18,33 +12,34 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     wget \
-    git \
+    curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Create symlinks for python
-RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
-    ln -s /usr/bin/pip3 /usr/bin/pip
+# Install Miniconda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
+    rm /tmp/miniconda.sh && \
+    /opt/conda/bin/conda clean -afy
 
-# Upgrade pip
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+# Add conda to PATH
+ENV PATH=/opt/conda/bin:$PATH
 
 # Set working directory
 WORKDIR /app
 
-# Copy requirements
-COPY requirements-gpu.txt .
+# Copy GPU environment file
+COPY ../environment-gpu.yml environment.yml
 
-# Install PyTorch with CUDA support first
-RUN pip install --no-cache-dir \
-    torch==2.0.1+cu118 \
-    torchvision==0.15.2+cu118 \
-    --extra-index-url https://download.pytorch.org/whl/cu118
+# Create conda environment with GPU support
+RUN conda env create -f environment.yml && \
+    conda clean -afy
 
-# Install ONNX Runtime GPU
-RUN pip install --no-cache-dir onnxruntime-gpu==1.16.3
+# Activate environment
+SHELL ["conda", "run", "-n", "face-recognition-system", "/bin/bash", "-c"]
 
-# Install remaining dependencies
-RUN pip install --no-cache-dir -r requirements-gpu.txt
+# Verify GPU installation
+RUN python -c "import torch; print(f'PyTorch CUDA available: {torch.cuda.is_available()}'); import fastapi; import insightface; print('Conda GPU environment OK')"
 
 # Copy application code
 COPY ./app ./app
@@ -53,6 +48,7 @@ COPY ./app ./app
 RUN mkdir -p data/uploads data/db data/cache logs models
 
 # Environment variables for CUDA
+ENV USE_GPU=true
 ENV CUDA_VISIBLE_DEVICES=0
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -60,5 +56,6 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 # Expose port
 EXPOSE 8000
 
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run application with conda environment
+CMD ["conda", "run", "--no-capture-output", "-n", "face-recognition-system", \
+     "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

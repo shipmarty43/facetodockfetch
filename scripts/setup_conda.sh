@@ -43,11 +43,9 @@ if command -v nvidia-smi &> /dev/null; then
     print_info "NVIDIA GPU detected:"
     nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
     USE_GPU=true
-    ENV_FILE="environment.yml"
 else
     print_warn "No NVIDIA GPU detected - will use CPU-only version"
     USE_GPU=false
-    ENV_FILE="environment.yml"
 fi
 
 # Ask user preference
@@ -59,9 +57,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_warn "GPU acceleration requested but no GPU detected. Continuing anyway..."
     fi
     SETUP_GPU=true
+    ENV_FILE="environment-gpu.yml"
 else
     SETUP_GPU=false
+    ENV_FILE="environment.yml"
 fi
+
+print_info "Using environment file: ${ENV_FILE}"
 
 # Create or update conda environment
 ENV_NAME="face-recognition-system"
@@ -90,20 +92,9 @@ print_info "Activating environment..."
 eval "$(conda shell.bash hook)"
 conda activate ${ENV_NAME}
 
-# Install GPU packages if requested
+# Verify GPU installation if GPU was set up
 if [ "$SETUP_GPU" = true ]; then
-    print_info "Installing GPU-specific packages..."
-
-    # Install PyTorch with CUDA
-    print_info "Installing PyTorch with CUDA support..."
-    pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 \
-        --extra-index-url https://download.pytorch.org/whl/cu118
-
-    # Install ONNX Runtime GPU
-    print_info "Installing ONNX Runtime GPU..."
-    pip install onnxruntime-gpu==1.16.3
-
-    # Verify GPU installation
+    print_info "Verifying GPU installation..."
     python -c "import torch; print(f'PyTorch CUDA available: {torch.cuda.is_available()}')" || print_warn "CUDA verification failed"
 fi
 
