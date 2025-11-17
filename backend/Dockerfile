@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
+# Configure conda to avoid channel priority issues
+RUN conda config --set channel_priority flexible
+
 # Set working directory
 WORKDIR /app
 
