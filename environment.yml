@@ -8,47 +8,36 @@ dependencies:
   # Python
   - python>=3.10,<3.12
 
-  # ML/AI - от conda для лучшей совместимости
+  # ML/AI frameworks (используются напрямую)
   - pytorch::pytorch>=2.0
   - pytorch::torchvision>=0.15
   - numpy>=1.24
-  - scikit-learn>=1.3
-  - pandas>=2.1
 
-  # Image Processing - conda packages
+  # Image processing (используются напрямую: PIL, cv2)
   - pillow>=10.0
   - opencv>=4.8
 
-  # Web Framework
+  # Web framework
   - fastapi>=0.104
   - uvicorn>=0.24
 
   # Database
   - sqlalchemy>=2.0
 
-  # Utilities
-  - requests>=2.31
-  - aiohttp>=3.9
-  - python-dotenv>=1.0
-
-  # Testing
-  - pytest>=7.4
-  - pytest-asyncio>=0.21
-  - httpx>=0.25
-
-  # Cryptography
+  # Authentication & Security
   - cryptography>=41.0
 
-  # Redis
+  # Task queue
   - redis-py>=5.0
 
-  # Build tools
+  # Development tools
   - pip
 
-  # Packages only available via pip
+  # Пакеты только через pip (недоступны в conda или специфичные версии)
   - pip:
-    # Web Framework extras
+    # Web framework extras
     - python-multipart>=0.0.6
+    - python-dotenv>=1.0
 
     # Async & Task Queue
     - celery>=5.3
@@ -66,11 +55,16 @@ dependencies:
     # Image Processing extras
     - pdf2image>=1.16
 
-    # OCR & Document Processing
+    # OCR & Document Processing (основные пакеты)
     - surya-ocr>=0.4
-    - python-mrz>=0.6
+    - mrz>=0.6
     - pytesseract>=0.3
 
     # Face Recognition
     - insightface>=0.7
     - onnxruntime>=1.16
+
+    # Testing (опционально)
+    - pytest>=7.4
+    - pytest-asyncio>=0.21
+    - httpx>=0.25

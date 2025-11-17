@@ -2,6 +2,8 @@
 
 Набор утилит для управления Face Recognition & OCR System.
 
+🔗 **Repository:** [https://github.com/shipmarty43/facetodockfetch](https://github.com/shipmarty43/facetodockfetch)
+
 ## 📋 Содержание
 
 - [Основные скрипты](#основные-скрипты)
@@ -129,6 +131,16 @@ python scripts/create_admin.py --username admin --password yourpassword
 ---
 
 ## Git актуализация
+
+> **Repository:** [https://github.com/shipmarty43/facetodockfetch](https://github.com/shipmarty43/facetodockfetch)
+
+### Первоначальное клонирование
+
+```bash
+# Клонировать репозиторий
+git clone https://github.com/shipmarty43/facetodockfetch.git
+cd facetodockfetch
+```
 
 ### Автоматическое обновление
 
