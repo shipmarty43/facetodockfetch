@@ -1,0 +1,64 @@
+# GPU-Enabled Backend Dockerfile
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python and system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    python3.10-dev \
+    build-essential \
+    libpoppler-cpp-dev \
+    poppler-utils \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    wget \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symlinks for python
+RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
+    ln -s /usr/bin/pip3 /usr/bin/pip
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements
+COPY requirements-gpu.txt .
+
+# Install PyTorch with CUDA support first
+RUN pip install --no-cache-dir \
+    torch==2.0.1+cu118 \
+    torchvision==0.15.2+cu118 \
+    --extra-index-url https://download.pytorch.org/whl/cu118
+
+# Install ONNX Runtime GPU
+RUN pip install --no-cache-dir onnxruntime-gpu==1.16.3
+
+# Install remaining dependencies
+RUN pip install --no-cache-dir -r requirements-gpu.txt
+
+# Copy application code
+COPY ./app ./app
+
+# Create necessary directories
+RUN mkdir -p data/uploads data/db data/cache logs models
+
+# Environment variables for CUDA
+ENV CUDA_VISIBLE_DEVICES=0
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# Expose port
+EXPOSE 8000
+
+# Run application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

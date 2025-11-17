@@ -139,6 +139,15 @@ def health_check():
         logger.error(f"Elasticsearch health check failed: {e}")
         es_status = "error"
 
+    # Check GPU availability
+    gpu_status = "not_available"
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_status = f"available ({torch.cuda.get_device_name(0)})"
+    except:
+        pass
+
     # Overall status
     overall_status = "healthy" if db_status == "ok" and es_status == "ok" else "degraded"
 
@@ -146,6 +155,7 @@ def health_check():
         "status": overall_status,
         "database": db_status,
         "elasticsearch": es_status,
+        "gpu": gpu_status,
         "mode": settings.MODE
     }
 
@@ -173,6 +183,33 @@ async def startup_event():
             logger.warning("Elasticsearch not connected - search functionality will be limited")
     except Exception as e:
         logger.warning(f"Elasticsearch check failed: {e}")
+
+    # Check CUDA/GPU availability
+    try:
+        import torch
+        import os
+
+        use_gpu = os.getenv('USE_GPU', 'false').lower() == 'true'
+
+        if torch.cuda.is_available():
+            device_name = torch.cuda.get_device_name(0)
+            cuda_version = torch.version.cuda
+            logger.info(f"CUDA is available! GPU: {device_name}")
+            logger.info(f"CUDA version: {cuda_version}")
+            logger.info(f"PyTorch version: {torch.__version__}")
+
+            if use_gpu:
+                logger.info("GPU acceleration ENABLED")
+            else:
+                logger.warning("GPU available but USE_GPU=false - using CPU")
+        else:
+            if use_gpu:
+                logger.warning("USE_GPU=true but CUDA is not available - falling back to CPU")
+            else:
+                logger.info("Running in CPU-only mode")
+
+    except Exception as e:
+        logger.warning(f"Cannot check CUDA status: {e}")
 
     logger.info("Application startup complete")
 

@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # Redis - Message broker for Celery
+  redis:
+    image: redis:7-alpine
+    container_name: face_recognition_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Elasticsearch - Vector search and full-text search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: face_recognition_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Backend - FastAPI application with GPU support
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.gpu
+    container_name: face_recognition_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./data/db:/app/data/db
+      - ./data/cache:/app/data/cache
+      - ./logs:/app/logs
+      - ./models:/app/models
+    environment:
+      - MODE=${MODE:-debug}
+      - DATABASE_URL=sqlite:///./data/db/face_recognition.db
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-jwt-dev-secret}
+      - USE_GPU=true
+      - CUDA_VISIBLE_DEVICES=0
+    depends_on:
+      - redis
+      - elasticsearch
+    restart: unless-stopped
+    # GPU configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker - Async document processing with GPU
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.gpu
+    container_name: face_recognition_celery
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./data/db:/app/data/db
+      - ./data/cache:/app/data/cache
+      - ./logs:/app/logs
+      - ./models:/app/models
+    environment:
+      - MODE=${MODE:-debug}
+      - DATABASE_URL=sqlite:///./data/db/face_recognition.db
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - USE_GPU=true
+      - CUDA_VISIBLE_DEVICES=0
+    depends_on:
+      - redis
+      - elasticsearch
+      - backend
+    restart: unless-stopped
+    # GPU configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Increase concurrency for GPU workers
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=8
+
+  # Frontend - React application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: face_recognition_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  elasticsearch_data:
+
+networks:
+  default:
+    name: face_recognition_network

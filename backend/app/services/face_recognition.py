@@ -24,15 +24,39 @@ class FaceRecognitionService:
         self._load_model()
 
     def _load_model(self):
-        """Load InsightFace model."""
+        """Load InsightFace model with GPU support if available."""
         try:
             import insightface
             from insightface.app import FaceAnalysis
+            import os
 
             logger.info(f"Loading InsightFace model: {self.model_name}")
-            self.model = FaceAnalysis(name=self.model_name, providers=['CPUExecutionProvider'])
+
+            # Check if GPU should be used
+            use_gpu = os.getenv('USE_GPU', 'false').lower() == 'true'
+
+            # Configure providers (GPU first, then CPU fallback)
+            if use_gpu:
+                try:
+                    import onnxruntime as ort
+                    available_providers = ort.get_available_providers()
+
+                    if 'CUDAExecutionProvider' in available_providers:
+                        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+                        logger.info("CUDA is available - using GPU for face recognition")
+                    else:
+                        providers = ['CPUExecutionProvider']
+                        logger.warning("CUDA requested but not available - falling back to CPU")
+                except:
+                    providers = ['CPUExecutionProvider']
+                    logger.warning("Could not check CUDA availability - using CPU")
+            else:
+                providers = ['CPUExecutionProvider']
+                logger.info("Using CPU for face recognition")
+
+            self.model = FaceAnalysis(name=self.model_name, providers=providers)
             self.model.prepare(ctx_id=0, det_size=(640, 640))
-            logger.info("InsightFace model loaded successfully")
+            logger.info(f"InsightFace model loaded successfully with providers: {providers}")
         except Exception as e:
             logger.error(f"Failed to load InsightFace model: {e}")
             logger.warning("Face recognition functionality will be limited")
