@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     ENCRYPTION_KEY: str = ""
 
-    # Database
-    DATABASE_URL: str = "sqlite:///./data/db/face_recognition.db"
+    # Database (use absolute path to avoid issues with working directory)
+    DATABASE_URL: str = f"sqlite:///{PROJECT_ROOT}/data/db/face_recognition.db"
 
     # Elasticsearch
     ELASTICSEARCH_URL: str = "http://localhost:9200"
@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
-    # File Storage
-    UPLOAD_DIR: str = "./data/uploads"
+    # File Storage (use absolute path)
+    UPLOAD_DIR: str = str(PROJECT_ROOT / "data" / "uploads")
     MAX_UPLOAD_SIZE_MB: int = 50
 
     # JWT Settings
@@ -47,9 +47,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # ML Models
-    FACE_MODEL_PATH: str = "./models/face_recognition"
-    OCR_MODEL_PATH: str = "./models/surya_ocr"
+    # ML Models (use absolute paths)
+    FACE_MODEL_PATH: str = str(PROJECT_ROOT / "models" / "face_recognition")
+    OCR_MODEL_PATH: str = str(PROJECT_ROOT / "models" / "surya_ocr")
     FACE_DETECTION_CONFIDENCE: float = 0.5
     FACE_SIMILARITY_THRESHOLD: float = 0.6
 
@@ -62,9 +62,9 @@ class Settings(BaseSettings):
     USE_GPU: bool = False
     CUDA_VISIBLE_DEVICES: str = "0"
 
-    # Logging
+    # Logging (use absolute path)
     LOG_LEVEL: str = "DEBUG"
-    LOG_FILE: str = "./logs/app.log"
+    LOG_FILE: str = str(PROJECT_ROOT / "logs" / "app.log")
     LOG_MAX_SIZE_MB: int = 100
     LOG_RETENTION_DAYS: int = 30
 
@@ -103,9 +103,9 @@ class Settings(BaseSettings):
         """Create necessary directories if they don't exist."""
         directories = [
             self.UPLOAD_DIR,
-            "data/db",
-            "data/cache",
-            "logs",
+            str(PROJECT_ROOT / "data" / "db"),
+            str(PROJECT_ROOT / "data" / "cache"),
+            str(PROJECT_ROOT / "logs"),
             self.FACE_MODEL_PATH,
             self.OCR_MODEL_PATH,
         ]

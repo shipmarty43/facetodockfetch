@@ -19,6 +19,11 @@ def create_admin(username: str, password: str, force: bool = False):
     db = SessionLocal()
 
     try:
+        # Validate password before attempting to hash
+        if not password or len(password) < 6:
+            print(f"✗ Password must be at least 6 characters long")
+            return False
+
         # Check if user already exists
         existing_user = db.query(User).filter(User.username == username).first()
 
@@ -29,17 +34,34 @@ def create_admin(username: str, password: str, force: bool = False):
                 return False
             else:
                 print(f"⚠ Resetting password for user '{username}'...")
-                existing_user.password_hash = hash_password(password)
-                existing_user.role = "admin"
-                existing_user.is_active = True
-                db.commit()
-                print(f"✓ Password reset for admin user '{username}'")
-                return True
+                try:
+                    password_hash = hash_password(password)
+                    existing_user.password_hash = password_hash
+                    existing_user.role = "admin"
+                    existing_user.is_active = True
+                    db.commit()
+                    print(f"✓ Password reset for admin user '{username}'")
+                    return True
+                except Exception as hash_error:
+                    print(f"✗ Password hashing failed: {hash_error}")
+                    print(f"  Password length: {len(password)} characters")
+                    print(f"  Password bytes: {len(password.encode('utf-8'))} bytes")
+                    raise
 
         # Create new admin user
+        print("  Hashing password...")
+        try:
+            password_hash = hash_password(password)
+        except Exception as hash_error:
+            print(f"✗ Password hashing failed: {hash_error}")
+            print(f"  Password length: {len(password)} characters")
+            print(f"  Password bytes: {len(password.encode('utf-8'))} bytes")
+            raise
+
+        print("  Creating user record...")
         admin = User(
             username=username,
-            password_hash=hash_password(password),
+            password_hash=password_hash,
             role="admin",
             is_active=True
         )
@@ -56,6 +78,8 @@ def create_admin(username: str, password: str, force: bool = False):
 
     except Exception as e:
         print(f"✗ Error creating admin user: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
         return False
 

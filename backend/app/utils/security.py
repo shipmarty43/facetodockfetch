@@ -68,9 +68,30 @@ def sanitize_filename(filename: str) -> str:
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
-    return pwd_context.hash(password)
+    # Ensure password is a string and strip whitespace
+    if not isinstance(password, str):
+        password = str(password)
+
+    password = password.strip()
+
+    # Validate password length
+    if not password:
+        raise ValueError("Password cannot be empty")
+
+    # Check byte length (bcrypt has 72-byte limit)
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        raise ValueError(f"Password is too long ({len(password_bytes)} bytes). Maximum is 72 bytes.")
+
+    try:
+        return pwd_context.hash(password)
+    except Exception as e:
+        raise ValueError(f"Password hashing failed: {str(e)}")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False

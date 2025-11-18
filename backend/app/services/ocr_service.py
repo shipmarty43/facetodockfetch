@@ -15,8 +15,10 @@ class OCRService:
 
     def __init__(self):
         """Initialize OCR service."""
-        self.model = None
-        self.processor = None
+        self.det_model = None
+        self.det_processor = None
+        self.rec_model = None
+        self.rec_processor = None
         self._load_model()
 
     def _load_model(self):
@@ -25,23 +27,34 @@ class OCRService:
             # Import Surya OCR (lazy import to avoid loading if not needed)
             # Try new API first (surya 0.4+)
             try:
-                from surya.model.detection import load_model as load_det_model
-                from surya.model.recognition import load_model as load_rec_model
-            except ImportError:
-                # Fallback to old API
+                from surya.model.detection.model import load_model as load_det_model, load_processor as load_det_processor
+                from surya.model.recognition.model import load_model as load_rec_model, load_processor as load_rec_processor
+
+                logger.info("Loading Surya OCR models and processors (v0.4+ API)...")
+                self.det_model = load_det_model()
+                self.det_processor = load_det_processor()
+                self.rec_model = load_rec_model()
+                self.rec_processor = load_rec_processor()
+                logger.info("Surya OCR models loaded successfully")
+            except (ImportError, AttributeError) as e:
+                # Fallback to old API (surya < 0.4)
+                logger.info(f"New API failed ({e}), trying legacy API...")
                 from surya.model.detection.segformer import load_model as load_det_model
                 from surya.model.recognition.model import load_model as load_rec_model
 
-            logger.info("Loading Surya OCR models...")
-            # Load detection and recognition models
-            self.det_model = load_det_model()
-            self.rec_model = load_rec_model()
-            logger.info("Surya OCR models loaded successfully")
+                logger.info("Loading Surya OCR models (legacy API)...")
+                self.det_model = load_det_model()
+                self.rec_model = load_rec_model()
+                self.det_processor = None
+                self.rec_processor = None
+                logger.info("Surya OCR models loaded successfully (legacy mode)")
         except Exception as e:
             logger.error(f"Failed to load Surya OCR models: {e}")
             logger.warning("OCR functionality will be limited")
             self.det_model = None
+            self.det_processor = None
             self.rec_model = None
+            self.rec_processor = None
 
     def extract_text_from_image(
         self,
@@ -64,12 +77,8 @@ class OCRService:
             if self.det_model is None or self.rec_model is None:
                 raise Exception("OCR models not loaded")
 
-            # Import OCR function (try both APIs)
-            try:
-                from surya.ocr import run_ocr
-            except ImportError:
-                # Try alternative import
-                from surya import run_ocr
+            # Import OCR function
+            from surya.ocr import run_ocr
 
             # Load image
             image = Image.open(image_path)
@@ -77,13 +86,23 @@ class OCRService:
             # Run OCR
             logger.info(f"Running OCR on {image_path} (attempt {attempt})")
 
-            # Try to run OCR (API may vary by version)
-            try:
-                # New API (0.4+)
-                predictions = run_ocr([image], [["en", "ru"]], self.det_model, self.rec_model)
-            except TypeError:
-                # Older API - different parameters
-                predictions = run_ocr([image], self.det_model, self.rec_model, langs=[["en", "ru"]])
+            # Languages for OCR
+            langs = ["en"]  # English by default, surya will auto-detect
+
+            # Run OCR with correct API based on what was loaded
+            if self.det_processor is not None and self.rec_processor is not None:
+                # New API (0.4+) with processors
+                predictions = run_ocr(
+                    [image],
+                    [langs],
+                    self.det_model,
+                    self.det_processor,
+                    self.rec_model,
+                    self.rec_processor
+                )
+            else:
+                # Legacy API without processors
+                predictions = run_ocr([image], [langs], self.det_model, self.rec_model)
 
             # Extract text and structure
             full_text = ""
