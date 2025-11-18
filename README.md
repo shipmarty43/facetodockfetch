@@ -77,12 +77,8 @@ conda activate face-recognition-system
 # 2. Запустить инфраструктуру (Redis + Elasticsearch) в Docker
 ./scripts/start_infrastructure.sh
 
-# 3. Инициализировать базы данных
-cd backend
-python scripts/init_db.py
-python scripts/init_elasticsearch.py
-python scripts/create_admin.py --username admin --password admin123
-cd ..
+# 3. Инициализировать всё (БД + Elasticsearch + admin по умолчанию)
+./scripts/init_all.sh
 
 # 4. Запустить приложение (backend + celery + frontend)
 ./scripts/start_services.sh

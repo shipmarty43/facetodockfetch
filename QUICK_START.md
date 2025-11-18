@@ -48,6 +48,24 @@ curl http://localhost:9200        # Должно показать версию E
 
 ## Шаг 3: Инициализировать базы данных
 
+### Вариант A: Автоматическая инициализация (рекомендуется)
+
+```bash
+# Активировать окружение
+conda activate face-recognition-system
+
+# Запустить полную инициализацию (БД + Elasticsearch + admin)
+./scripts/init_all.sh
+```
+
+**Этот скрипт автоматически:**
+- ✅ Создаст все необходимые директории
+- ✅ Инициализирует SQLite базу данных
+- ✅ Инициализирует Elasticsearch индексы
+- ✅ Создаст администратора с логином: **admin** / пароль: **admin123**
+
+### Вариант B: Ручная инициализация
+
 ```bash
 cd backend
 
@@ -57,11 +75,16 @@ python scripts/init_db.py
 # Инициализировать Elasticsearch индексы
 python scripts/init_elasticsearch.py
 
-# Создать администратора
+# Создать администратора (можно указать свои данные)
 python scripts/create_admin.py --username admin --password admin123
 
 cd ..
 ```
+
+**Параметры create_admin.py:**
+- `--username` - имя пользователя (по умолчанию: admin)
+- `--password` - пароль (по умолчанию: admin123)
+- `--force` - сбросить пароль если пользователь существует
 
 ---
 
