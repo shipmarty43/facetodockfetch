@@ -80,7 +80,7 @@ echo $CELERY_PID > logs/celery.pid
 
 # Start frontend (if npm is available)
 if command -v npm &> /dev/null; then
-    print_info "Starting frontend on http://localhost:3000..."
+    print_info "Starting frontend on http://localhost:3003..."
     cd frontend
     if [ ! -d "node_modules" ]; then
         print_info "Installing frontend dependencies..."
@@ -102,7 +102,7 @@ echo ""
 echo "Services:"
 echo "  - Backend API: http://localhost:30000"
 echo "  - API Docs: http://localhost:30000/docs"
-echo "  - Frontend: http://localhost:3000"
+echo "  - Frontend: http://localhost:3003"
 echo ""
 echo "Logs:"
 echo "  - Backend: tail -f logs/backend.log"

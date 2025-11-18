@@ -122,7 +122,7 @@ services:
       dockerfile: Dockerfile
     container_name: face_recognition_frontend
     ports:
-      - "3000:80"
+      - "3003:80"
     depends_on:
       - backend
     restart: unless-stopped

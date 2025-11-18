@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     LOG_RETENTION_DAYS: int = 30
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:30000"
+    CORS_ORIGINS: str = "http://localhost:3003,http://localhost:30000"
 
     # API
     API_V1_PREFIX: str = "/api/v1"

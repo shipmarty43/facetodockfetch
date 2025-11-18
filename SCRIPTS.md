@@ -124,7 +124,7 @@ python scripts/create_admin.py --username admin --password yourpassword
 - Redis (если не запущен)
 - Backend на :30000
 - Celery worker
-- Frontend на :3000 (если установлен npm)
+- Frontend на :3003 (если установлен npm)
 
 **PID файлы сохраняются в:** `logs/*.pid`
 

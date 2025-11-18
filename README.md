@@ -41,7 +41,7 @@ docker-compose exec backend python scripts/init_elasticsearch.py
 docker-compose exec backend python scripts/create_admin.py --username admin --password admin123
 
 # 6. Открыть в браузере
-# Frontend: http://localhost:3000
+# Frontend: http://localhost:3003
 # Backend API: http://localhost:30000/docs
 ```
 

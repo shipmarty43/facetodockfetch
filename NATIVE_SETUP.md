@@ -263,7 +263,7 @@ if torch.cuda.is_available():
 
 ```bash
 # Должен быть доступен на
-http://localhost:3000
+http://localhost:3003
 ```
 
 ---
@@ -506,7 +506,7 @@ ps aux | grep -E "face-recognition|uvicorn|celery"
 
 # Освободить порты если заняты
 sudo lsof -ti:30000 | xargs kill -9  # Backend
-sudo lsof -ti:3000 | xargs kill -9  # Frontend
+sudo lsof -ti:3003 | xargs kill -9  # Frontend
 
 # Очистить кэш conda
 conda clean -a

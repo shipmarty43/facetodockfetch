@@ -166,7 +166,7 @@ echo ""
 echo "7. In another terminal, start frontend:"
 echo "   cd frontend && npm install && npm run dev"
 echo ""
-echo "8. Open http://localhost:3000 in your browser"
+echo "8. Open http://localhost:3003 in your browser"
 echo ""
 
 if [ "$SETUP_GPU" = true ]; then
