@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 """Create admin user for the system."""
+import warnings
+
+# Suppress bcrypt warnings BEFORE any imports that use passlib
+warnings.filterwarnings("ignore", message=".*trapped.*error reading bcrypt version.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="passlib")
+
 import sys
 import argparse
 from pathlib import Path

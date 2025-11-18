@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 """Check if all required dependencies are installed and working."""
+import warnings
+
+# Suppress bcrypt warnings BEFORE any imports
+warnings.filterwarnings("ignore", message=".*trapped.*error reading bcrypt version.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="passlib")
+
 import sys
 from pathlib import Path
 
