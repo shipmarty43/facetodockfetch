@@ -250,9 +250,11 @@ sleep 3
 
 # Start Celery worker
 print_info "Запуск Celery worker..."
-celery -A backend.app.celery_app worker --loglevel=info --concurrency=4 > logs/celery.log 2>&1 &
+cd backend
+celery -A app.celery_app worker --loglevel=info --concurrency=4 > ../logs/celery.log 2>&1 &
 CELERY_PID=$!
-echo $CELERY_PID > logs/celery.pid
+echo $CELERY_PID > ../logs/celery.pid
+cd ..
 
 # Start frontend (if npm is available)
 if command -v npm &> /dev/null; then
