@@ -95,6 +95,10 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
+    # Strip whitespace for consistency with hash_password
+    if isinstance(plain_password, str):
+        plain_password = plain_password.strip()
+
     try:
         return pwd_context.verify(plain_password, hashed_password)
     except Exception:

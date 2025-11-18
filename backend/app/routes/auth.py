@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from ..database import get_db, User
 from ..models.auth import UserLogin, Token, UserResponse
-from ..utils.auth import verify_password, create_access_token, create_refresh_token
+from ..utils.auth import create_access_token, create_refresh_token
+from ..utils.security import verify_password
 from ..dependencies import get_current_user
 from ..utils.logging import log_to_database
 
