@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     MAX_RETRIES_OCR: int = 3
     BATCH_SIZE: int = 32
 
+    # GPU/CUDA Settings
+    USE_GPU: bool = False
+    CUDA_VISIBLE_DEVICES: str = "0"
+
     # Logging
     LOG_LEVEL: str = "DEBUG"
     LOG_FILE: str = "./logs/app.log"
