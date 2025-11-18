@@ -194,7 +194,7 @@ cd /home/admin1/facetodockfetch
 conda activate face-recognition-system
 
 cd backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 30000 --reload
 ```
 
 #### Терминал 2: Celery Worker
@@ -227,12 +227,12 @@ npm run dev
 
 ```bash
 # Health check
-curl http://localhost:8000/health
+curl http://localhost:30000/health
 
 # API документация
-open http://localhost:8000/docs
+open http://localhost:30000/docs
 # или
-firefox http://localhost:8000/docs
+firefox http://localhost:30000/docs
 ```
 
 ### Celery Worker
@@ -408,8 +408,8 @@ celery -A app.celery_app worker \
 # Проверить логи
 cat logs/backend.log
 
-# Проверить что порт 8000 свободен
-sudo lsof -i :8000
+# Проверить что порт 30000 свободен
+sudo lsof -i :30000
 
 # Проверить что все зависимости установлены
 conda activate face-recognition-system
@@ -505,7 +505,7 @@ docker-compose down
 ps aux | grep -E "face-recognition|uvicorn|celery"
 
 # Освободить порты если заняты
-sudo lsof -ti:8000 | xargs kill -9  # Backend
+sudo lsof -ti:30000 | xargs kill -9  # Backend
 sudo lsof -ti:3000 | xargs kill -9  # Frontend
 
 # Очистить кэш conda

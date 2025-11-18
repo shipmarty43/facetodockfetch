@@ -122,7 +122,7 @@ python scripts/create_admin.py --username admin --password yourpassword
 
 **start_services.sh запускает:**
 - Redis (если не запущен)
-- Backend на :8000
+- Backend на :30000
 - Celery worker
 - Frontend на :3000 (если установлен npm)
 
@@ -250,7 +250,7 @@ tail -f logs/*.log
 
 ```bash
 # Проверить статус всех сервисов
-curl http://localhost:8000/health | python3 -m json.tool
+curl http://localhost:30000/health | python3 -m json.tool
 
 # Пример ответа:
 {
@@ -355,7 +355,7 @@ curl http://localhost:9200/_stats
 curl -X DELETE http://localhost:9200/face_embeddings
 
 # Пересоздать (через админку)
-curl -X POST http://localhost:8000/api/v1/admin/reindex \
+curl -X POST http://localhost:30000/api/v1/admin/reindex \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -366,8 +366,8 @@ curl -X POST http://localhost:8000/api/v1/admin/reindex \
 ### "Port already in use"
 
 ```bash
-# Найти процесс на порту 8000
-lsof -i :8000
+# Найти процесс на порту 30000
+lsof -i :30000
 
 # Убить процесс
 kill -9 <PID>
@@ -464,6 +464,6 @@ sudo systemctl start face-recognition
 | **Очистка Docker** | `./scripts/docker_cleanup.sh` |
 | **Запуск (Conda)** | `./scripts/start_services.sh` |
 | **Остановка (Conda)** | `./scripts/stop_services.sh` |
-| **Health check** | `curl localhost:8000/health` |
+| **Health check** | `curl localhost:30000/health` |
 
 Все скрипты находятся в `scripts/` и имеют права на выполнение.

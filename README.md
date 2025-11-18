@@ -42,7 +42,7 @@ docker-compose exec backend python scripts/create_admin.py --username admin --pa
 
 # 6. Открыть в браузере
 # Frontend: http://localhost:3000
-# Backend API: http://localhost:8000/docs
+# Backend API: http://localhost:30000/docs
 ```
 
 ### Вариант 2: Docker Compose с GPU (рекомендуется для production)
@@ -61,7 +61,7 @@ docker-compose -f docker-compose.gpu.yml exec backend python scripts/init_db.py
 # ...
 
 # Проверить GPU
-curl http://localhost:8000/health
+curl http://localhost:30000/health
 # Должно показать: "gpu": "available (NVIDIA GeForce RTX ...)"
 ```
 
@@ -88,7 +88,7 @@ sudo apt-get install -y redis-server elasticsearch
 ./scripts/start_services.sh
 
 # 5. Проверить работу
-curl http://localhost:8000/health
+curl http://localhost:30000/health
 ```
 
 **Преимущества нативной установки:**
@@ -145,7 +145,7 @@ facetodockfetch/
 
 ## API Документация
 
-Swagger UI: http://localhost:8000/docs
+Swagger UI: http://localhost:30000/docs
 
 ### Основные endpoints
 

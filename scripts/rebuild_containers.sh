@@ -79,9 +79,9 @@ print_info "Checking backend health endpoint..."
 max_retries=30
 counter=0
 while [ $counter -lt $max_retries ]; do
-    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+    if curl -s http://localhost:30000/health > /dev/null 2>&1; then
         print_info "Backend is healthy!"
-        curl -s http://localhost:8000/health | python3 -m json.tool || echo ""
+        curl -s http://localhost:30000/health | python3 -m json.tool || echo ""
         break
     fi
     counter=$((counter+1))
@@ -99,8 +99,8 @@ print_info "Rebuild completed!"
 print_info "=========================================="
 echo ""
 echo "Services:"
-echo "  - Backend: http://localhost:8000"
-echo "  - API Docs: http://localhost:8000/docs"
+echo "  - Backend: http://localhost:30000"
+echo "  - API Docs: http://localhost:30000/docs"
 echo "  - Frontend: http://localhost:3000"
 echo ""
 echo "View logs:"

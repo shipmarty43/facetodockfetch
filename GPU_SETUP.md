@@ -126,7 +126,7 @@ echo "USE_GPU=true" >> .env
 
 ```bash
 # Проверить через API
-curl http://localhost:8000/health
+curl http://localhost:30000/health
 
 # Ответ должен содержать:
 # {

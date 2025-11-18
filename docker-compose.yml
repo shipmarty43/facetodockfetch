@@ -44,7 +44,7 @@ services:
       dockerfile: backend/Dockerfile
     container_name: face_recognition_backend
     ports:
-      - "8000:8000"
+      - "30000:30000"
     volumes:
       - ./data/uploads:/app/data/uploads
       - ./data/db:/app/data/db
@@ -64,7 +64,7 @@ services:
       - redis
       - elasticsearch
     restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 30000 --reload
 
   # Celery Worker - Async document processing
   celery_worker:
@@ -85,6 +85,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-jwt-dev-secret}
     depends_on:
       - redis
       - elasticsearch

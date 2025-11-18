@@ -62,9 +62,9 @@ fi
 mkdir -p logs
 
 # Start backend
-print_info "Starting backend on http://localhost:8000..."
+print_info "Starting backend on http://localhost:30000..."
 cd backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > ../logs/backend.log 2>&1 &
+uvicorn app.main:app --host 0.0.0.0 --port 30000 --reload > ../logs/backend.log 2>&1 &
 BACKEND_PID=$!
 echo $BACKEND_PID > ../logs/backend.pid
 cd ..
@@ -100,8 +100,8 @@ print_info "All services started!"
 print_info "=========================================="
 echo ""
 echo "Services:"
-echo "  - Backend API: http://localhost:8000"
-echo "  - API Docs: http://localhost:8000/docs"
+echo "  - Backend API: http://localhost:30000"
+echo "  - API Docs: http://localhost:30000/docs"
 echo "  - Frontend: http://localhost:3000"
 echo ""
 echo "Logs:"
