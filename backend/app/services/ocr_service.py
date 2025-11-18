@@ -15,6 +15,7 @@ class OCRService:
 
     def __init__(self):
         """Initialize OCR service."""
+        self.foundation_predictor = None
         self.det_predictor = None
         self.rec_predictor = None
         self._load_predictors()
@@ -25,6 +26,7 @@ class OCRService:
             # Import Surya OCR predictors
             logger.info("Loading Surya OCR predictors...")
 
+            from surya.foundation import FoundationPredictor
             from surya.detection import DetectionPredictor
             from surya.recognition import RecognitionPredictor
             from ..config import settings
@@ -40,12 +42,15 @@ class OCRService:
             os.environ['RECOGNITION_BATCH_SIZE'] = str(settings.RECOGNITION_BATCH_SIZE)
             os.environ['LAYOUT_BATCH_SIZE'] = str(settings.LAYOUT_BATCH_SIZE)
 
-            # Initialize predictors
+            # Initialize predictors in correct order
+            logger.info("Initializing foundation predictor...")
+            self.foundation_predictor = FoundationPredictor()
+
             logger.info("Initializing detection predictor...")
             self.det_predictor = DetectionPredictor()
 
             logger.info("Initializing recognition predictor...")
-            self.rec_predictor = RecognitionPredictor()
+            self.rec_predictor = RecognitionPredictor(self.foundation_predictor)
 
             logger.info("✓ Surya OCR predictors loaded successfully")
             logger.info(f"  Detection threshold: {settings.DETECTOR_TEXT_THRESHOLD}")
@@ -56,6 +61,7 @@ class OCRService:
         except ImportError as e:
             logger.error(f"Failed to import Surya OCR: {e}")
             logger.error("Make sure surya-ocr is installed: pip install surya-ocr")
+            self.foundation_predictor = None
             self.det_predictor = None
             self.rec_predictor = None
         except Exception as e:
@@ -63,6 +69,7 @@ class OCRService:
             logger.warning("OCR functionality will be limited")
             import traceback
             traceback.print_exc()
+            self.foundation_predictor = None
             self.det_predictor = None
             self.rec_predictor = None
 
@@ -84,7 +91,7 @@ class OCRService:
         start_time = time.time()
 
         try:
-            if self.det_predictor is None or self.rec_predictor is None:
+            if self.det_predictor is None or self.rec_predictor is None or self.foundation_predictor is None:
                 raise Exception("OCR predictors not loaded")
 
             # Load image
@@ -93,11 +100,9 @@ class OCRService:
             # Run OCR
             logger.info(f"Running OCR on {image_path} (attempt {attempt})")
 
-            # Step 1: Detect text regions
-            det_predictions = self.det_predictor([image])
-
-            # Step 2: Recognize text in detected regions
-            rec_predictions = self.rec_predictor([image], det_predictions)
+            # Run recognition (it will use det_predictor internally for detection)
+            # Correct API: rec_predictor([images], det_predictor=detection_predictor)
+            rec_predictions = self.rec_predictor([image], det_predictor=self.det_predictor)
 
             # Extract text and structure
             full_text = ""

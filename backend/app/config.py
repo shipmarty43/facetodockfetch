@@ -58,8 +58,8 @@ class Settings(BaseSettings):
     MAX_RETRIES_OCR: int = 3
     BATCH_SIZE: int = 32
 
-    # GPU/CUDA Settings
-    USE_GPU: bool = False
+    # GPU/CUDA Settings (GPU enabled by default for better performance)
+    USE_GPU: bool = True
     CUDA_VISIBLE_DEVICES: str = "0"
     PYTORCH_CUDA_ALLOC_CONF: str = "expandable_segments:True"
 

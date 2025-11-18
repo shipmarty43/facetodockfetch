@@ -70,16 +70,19 @@ def main():
         # Try to import specific predictors
         print("  Checking Surya predictors:")
         try:
+            from surya.foundation import FoundationPredictor
             from surya.detection import DetectionPredictor
             from surya.recognition import RecognitionPredictor
-            print("    ✓ DetectionPredictor and RecognitionPredictor")
+            print("    ✓ FoundationPredictor, DetectionPredictor, RecognitionPredictor")
 
             # Try to instantiate (may take time)
             try:
-                print("    Testing predictor initialization...")
+                print("    Testing predictor initialization (may download models)...")
+                foundation = FoundationPredictor()
+                print("    ✓ FoundationPredictor instantiated")
                 det = DetectionPredictor()
                 print("    ✓ DetectionPredictor instantiated")
-                rec = RecognitionPredictor()
+                rec = RecognitionPredictor(foundation)
                 print("    ✓ RecognitionPredictor instantiated")
             except Exception as e:
                 print(f"    ⚠ Predictor initialization: {e}")

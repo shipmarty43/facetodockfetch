@@ -226,6 +226,31 @@ else:
     print(f"Error: {result['error']}")
 ```
 
+### Прямое использование Surya API
+
+```python
+from PIL import Image
+from surya.foundation import FoundationPredictor
+from surya.detection import DetectionPredictor
+from surya.recognition import RecognitionPredictor
+
+# Инициализация предикторов
+foundation_predictor = FoundationPredictor()
+detection_predictor = DetectionPredictor()
+recognition_predictor = RecognitionPredictor(foundation_predictor)
+
+# Загрузка изображения
+image = Image.open("document.jpg")
+
+# OCR
+predictions = recognition_predictor([image], det_predictor=detection_predictor)
+
+# Обработка результатов
+for prediction in predictions:
+    for text_line in prediction.text_lines:
+        print(text_line.text)
+```
+
 ### REST API
 
 ```bash
@@ -238,6 +263,8 @@ curl -X POST http://localhost:30000/api/v1/documents/upload \
 ## Архитектура
 
 ```
+                 FoundationPredictor
+                        ↓
 Image → DetectionPredictor → Text Regions
                 ↓
          RecognitionPredictor → Text Lines
@@ -245,16 +272,23 @@ Image → DetectionPredictor → Text Regions
          Confidence Calculation → Final Result
 ```
 
+### FoundationPredictor
+
+- Базовая модель-основа для всех предикторов
+- Предоставляет общие компоненты и веса
+- Инициализируется первым и передается в RecognitionPredictor
+
 ### DetectionPredictor
 
 - Находит области с текстом на изображении
 - Использует модель на основе трансформеров
-- Возвращает bounding boxes
+- Возвращает bounding boxes для найденных текстовых регионов
 
 ### RecognitionPredictor
 
-- Распознает текст в найденных областях
-- Поддерживает multiple languages
+- Требует FoundationPredictor для инициализации
+- Распознает текст в найденных областях (использует DetectionPredictor)
+- Поддерживает 90+ языков
 - Возвращает текст и confidence scores
 
 ## Best Practices
