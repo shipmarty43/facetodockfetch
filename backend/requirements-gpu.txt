@@ -23,7 +23,7 @@ pydantic-settings==2.1.0
 
 # Image Processing
 Pillow==10.1.0
-opencv-python==4.8.1
+opencv-python==4.8.1.78
 pdf2image==1.16.3
 
 # OCR & Document Processing
