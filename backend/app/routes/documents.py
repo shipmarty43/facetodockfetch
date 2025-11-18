@@ -70,14 +70,27 @@ async def upload_document(
     # Check for duplicates
     existing_doc = db.query(Document).filter(Document.file_hash == file_hash).first()
     if existing_doc:
-        # Create new version
-        version_number = existing_doc.version_number + 1
-        parent_id = existing_doc.id
-    else:
-        version_number = 1
-        parent_id = None
+        # Remove the duplicate file we just saved
+        file_path.unlink()
 
-    # Create document record
+        log_to_database(
+            db,
+            "INFO",
+            "document_duplicate_detected",
+            {"document_id": existing_doc.id, "filename": filename, "original_upload": existing_doc.original_filename},
+            user_id=current_user.id
+        )
+
+        return {
+            "document_id": existing_doc.id,
+            "file_hash": existing_doc.file_hash,
+            "original_filename": existing_doc.original_filename,
+            "processing_status": existing_doc.processing_status,
+            "message": f"Document already exists (uploaded as '{existing_doc.original_filename}'). Returning existing document.",
+            "is_duplicate": True
+        }
+
+    # Create document record (only for new files)
     document = Document(
         file_hash=file_hash,
         original_filename=filename,
@@ -86,8 +99,8 @@ async def upload_document(
         file_size_bytes=file_size,
         uploaded_by=current_user.id,
         processing_status="pending",
-        version_number=version_number,
-        parent_document_id=parent_id
+        version_number=1,
+        parent_document_id=None
     )
 
     db.add(document)
@@ -110,7 +123,8 @@ async def upload_document(
         "file_hash": file_hash,
         "original_filename": filename,
         "processing_status": "pending",
-        "message": "Document uploaded and queued for processing"
+        "message": "Document uploaded and queued for processing",
+        "is_duplicate": False
     }
 
 
