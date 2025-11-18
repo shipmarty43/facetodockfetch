@@ -1,0 +1,49 @@
+version: '3.8'
+
+# Infrastructure services only (Redis + Elasticsearch)
+# Use this for local development when running backend/frontend natively
+
+services:
+  # Redis - Message broker for Celery
+  redis:
+    image: redis:7-alpine
+    container_name: face_recognition_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Elasticsearch - Vector search and full-text search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: face_recognition_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  redis_data:
+  elasticsearch_data:
+
+networks:
+  default:
+    name: face_recognition_network

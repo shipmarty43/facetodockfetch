@@ -44,8 +44,8 @@ COPY backend/app ./app
 RUN mkdir -p data/uploads data/db data/cache logs models
 
 # Expose port
-EXPOSE 8000
+EXPOSE 30000
 
 # Run application with conda environment
 CMD ["conda", "run", "--no-capture-output", "-n", "face-recognition-system", \
-     "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+     "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "30000"]

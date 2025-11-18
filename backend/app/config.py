@@ -7,6 +7,10 @@ from typing import Literal
 import os
 from pathlib import Path
 
+# Determine project root (2 levels up from this file: backend/app/config.py -> root)
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
@@ -54,6 +58,10 @@ class Settings(BaseSettings):
     MAX_RETRIES_OCR: int = 3
     BATCH_SIZE: int = 32
 
+    # GPU/CUDA Settings
+    USE_GPU: bool = False
+    CUDA_VISIBLE_DEVICES: str = "0"
+
     # Logging
     LOG_LEVEL: str = "DEBUG"
     LOG_FILE: str = "./logs/app.log"
@@ -61,13 +69,14 @@ class Settings(BaseSettings):
     LOG_RETENTION_DAYS: int = 30
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
+    CORS_ORIGINS: str = "http://localhost:3003,http://localhost:30000"
 
     # API
     API_V1_PREFIX: str = "/api/v1"
 
     class Config:
-        env_file = ".env"
+        env_file = str(ENV_FILE)
+        env_file_encoding = 'utf-8'
         case_sensitive = True
 
     @property

@@ -44,7 +44,7 @@ services:
       dockerfile: backend/Dockerfile.gpu
     container_name: face_recognition_backend
     ports:
-      - "8000:8000"
+      - "30000:30000"
     volumes:
       - ./data/uploads:/app/data/uploads
       - ./data/db:/app/data/db
@@ -74,7 +74,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 30000 --reload
 
   # Celery Worker - Async document processing with GPU
   celery_worker:
@@ -95,6 +95,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-jwt-dev-secret}
       - USE_GPU=true
       - CUDA_VISIBLE_DEVICES=0
     depends_on:
@@ -120,7 +122,7 @@ services:
       dockerfile: Dockerfile
     container_name: face_recognition_frontend
     ports:
-      - "3000:80"
+      - "3003:80"
     depends_on:
       - backend
     restart: unless-stopped

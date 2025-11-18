@@ -125,7 +125,7 @@ class TestCORS:
     def test_cors_headers(self, client):
         """Test CORS headers are present"""
         response = client.options("/health",
-                                 headers={"Origin": "http://localhost:3000"})
+                                 headers={"Origin": "http://localhost:3003"})
 
         # Should have CORS headers
         assert "access-control-allow-origin" in [h.lower() for h in response.headers.keys()]

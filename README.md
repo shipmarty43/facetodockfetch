@@ -41,8 +41,8 @@ docker-compose exec backend python scripts/init_elasticsearch.py
 docker-compose exec backend python scripts/create_admin.py --username admin --password admin123
 
 # 6. Открыть в браузере
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000/docs
+# Frontend: http://localhost:3003
+# Backend API: http://localhost:30000/docs
 ```
 
 ### Вариант 2: Docker Compose с GPU (рекомендуется для production)
@@ -61,43 +61,41 @@ docker-compose -f docker-compose.gpu.yml exec backend python scripts/init_db.py
 # ...
 
 # Проверить GPU
-curl http://localhost:8000/health
+curl http://localhost:30000/health
 # Должно показать: "gpu": "available (NVIDIA GeForce RTX ...)"
 ```
 
 📖 **Детальное руководство по GPU:** [GPU_SETUP.md](GPU_SETUP.md)
 
-### Вариант 3: Нативная установка (без Docker, рекомендуется для разработки)
+### Вариант 3: Гибридный режим - инфраструктура в Docker, приложение локально ⭐ **РЕКОМЕНДУЕТСЯ ДЛЯ РАЗРАБОТКИ**
 
 ```bash
-# 1. Автоматическая установка окружения
+# 1. Установить Conda окружение
 ./scripts/setup_conda.sh
-
-# 2. Активировать окружение
 conda activate face-recognition-system
 
-# 3. Запустить внешние сервисы (Redis, Elasticsearch)
-# Вариант A: через Docker (только сервисы)
-docker run -d -p 6379:6379 redis:7-alpine
-docker run -d -p 9200:9200 -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+# 2. Запустить инфраструктуру (Redis + Elasticsearch) в Docker
+./scripts/start_infrastructure.sh
 
-# Вариант B: системные пакеты
-sudo apt-get install -y redis-server elasticsearch
+# 3. Инициализировать всё (БД + Elasticsearch + admin по умолчанию)
+./scripts/init_all.sh
 
-# 4. Запустить все сервисы приложения
+# 4. Запустить приложение (backend + celery + frontend)
 ./scripts/start_services.sh
 
 # 5. Проверить работу
-curl http://localhost:8000/health
+curl http://localhost:30000/health
 ```
 
-**Преимущества нативной установки:**
-- ✅ Прямой доступ к GPU (без Docker overhead)
-- ✅ Проще отладка и разработка
-- ✅ Hot reload работает быстрее
-- ✅ Лучше для тестирования GPU
+**Преимущества гибридного режима:**
+- ✅ **Redis и Elasticsearch в Docker** - простое управление, не нужно устанавливать системно
+- ✅ **Прямой доступ к GPU** для backend - без Docker overhead
+- ✅ **Hot reload** - мгновенная перезагрузка при изменениях кода
+- ✅ **Простая отладка** - все логи доступны напрямую
+- ✅ **Изолированная инфраструктура** - можно остановить/удалить без влияния на систему
 
-📖 **Полное руководство:** [NATIVE_SETUP.md](NATIVE_SETUP.md)
+📖 **Быстрый старт:** [QUICK_START.md](QUICK_START.md)
+📖 **Детальное руководство:** [NATIVE_SETUP.md](NATIVE_SETUP.md)
 
 ## Структура проекта
 
@@ -145,7 +143,7 @@ facetodockfetch/
 
 ## API Документация
 
-Swagger UI: http://localhost:8000/docs
+Swagger UI: http://localhost:30000/docs
 
 ### Основные endpoints
 
