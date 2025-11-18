@@ -25,14 +25,21 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 # Add conda to PATH
 ENV PATH=/opt/conda/bin:$PATH
 
+# Configure conda to avoid channel priority issues
+RUN conda config --set channel_priority flexible
+
+# Accept Anaconda Terms of Service
+RUN conda config --set allow_conda_downgrades true && \
+    echo "yes" | conda tos accept
+
 # Set working directory
 WORKDIR /app
 
 # Copy GPU environment file
-COPY ../environment-gpu.yml environment.yml
+COPY environment-gpu.yml .
 
 # Create conda environment with GPU support
-RUN conda env create -f environment.yml && \
+RUN conda env create -f environment-gpu.yml && \
     conda clean -afy
 
 # Activate environment
@@ -42,7 +49,7 @@ SHELL ["conda", "run", "-n", "face-recognition-system", "/bin/bash", "-c"]
 RUN python -c "import torch; print(f'PyTorch CUDA available: {torch.cuda.is_available()}'); import fastapi; import insightface; print('Conda GPU environment OK')"
 
 # Copy application code
-COPY ./app ./app
+COPY backend/app ./app
 
 # Create necessary directories
 RUN mkdir -p data/uploads data/db data/cache logs models
