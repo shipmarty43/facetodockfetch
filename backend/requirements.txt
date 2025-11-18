@@ -24,7 +24,7 @@ opencv-python==4.8.1
 pdf2image==1.16.3
 
 # OCR & Document Processing
-surya-ocr==0.4.14
+surya-ocr>=0.9.0
 mrz==0.6.2
 pytesseract==0.3.10
 

@@ -42,6 +42,9 @@ class OCRService:
             os.environ['RECOGNITION_BATCH_SIZE'] = str(settings.RECOGNITION_BATCH_SIZE)
             os.environ['LAYOUT_BATCH_SIZE'] = str(settings.LAYOUT_BATCH_SIZE)
 
+            # Set detection threshold
+            os.environ['DETECTOR_TEXT_THRESHOLD'] = str(settings.DETECTOR_TEXT_THRESHOLD)
+
             # Initialize predictors in correct order
             logger.info("Initializing foundation predictor...")
             self.foundation_predictor = FoundationPredictor()
@@ -53,6 +56,7 @@ class OCRService:
             self.rec_predictor = RecognitionPredictor(self.foundation_predictor)
 
             logger.info("✓ Surya OCR predictors loaded successfully")
+            logger.info(f"  Supported OCR languages: {settings.OCR_LANGUAGES}")
             logger.info(f"  Detection threshold: {settings.DETECTOR_TEXT_THRESHOLD}")
             logger.info(f"  Batch sizes - Detector: {settings.DETECTOR_BATCH_SIZE}, "
                        f"Recognition: {settings.RECOGNITION_BATCH_SIZE}, "
@@ -122,7 +126,7 @@ class OCRService:
         logger.info(f"Running Surya OCR on {image_path} (attempt {attempt})")
 
         # Run recognition (it will use det_predictor internally for detection)
-        # Correct API: rec_predictor([images], det_predictor=detection_predictor)
+        # Correct API for Surya OCR 0.9.0+: rec_predictor([images], det_predictor=detection_predictor)
         rec_predictions = self.rec_predictor([image], det_predictor=self.det_predictor)
 
         # Extract text and structure
@@ -134,15 +138,31 @@ class OCRService:
 
         if rec_predictions and len(rec_predictions) > 0:
             prediction = rec_predictions[0]
+            logger.debug(f"Surya OCR prediction type: {type(prediction)}")
 
             # Extract text blocks
-            if hasattr(prediction, 'text_lines'):
-                for text_line in prediction.text_lines:
-                    text = text_line.text if hasattr(text_line, 'text') else str(text_line)
+            # Check if text_lines exists and is not empty
+            text_lines = getattr(prediction, 'text_lines', [])
+            if text_lines:
+                logger.info(f"Found {len(text_lines)} text lines in image")
+                for idx, text_line in enumerate(text_lines):
+                    # Get text content
+                    text = getattr(text_line, 'text', str(text_line))
+                    if not text:
+                        continue
+
                     full_text += text + "\n"
 
                     # Get bounding box if available
-                    bbox = text_line.bbox if hasattr(text_line, 'bbox') else None
+                    bbox = getattr(text_line, 'bbox', None)
+                    # Convert bbox to list if it's a different type
+                    if bbox is not None and not isinstance(bbox, (list, dict)):
+                        try:
+                            bbox = list(bbox)
+                        except:
+                            bbox = None
+
+                    # Get confidence score
                     confidence = getattr(text_line, 'confidence', 1.0)
 
                     structured_data["blocks"].append({
@@ -150,12 +170,21 @@ class OCRService:
                         "bbox": bbox,
                         "confidence": confidence
                     })
-
-            # Detect languages
-            if hasattr(prediction, 'languages'):
-                structured_data["languages"] = prediction.languages
             else:
-                structured_data["languages"] = ["en"]  # Default to English
+                logger.warning(f"No text lines found in Surya OCR prediction for {image_path}")
+
+            # Detect languages from prediction if available
+            # Note: Surya OCR may not always return languages in prediction object
+            languages = getattr(prediction, 'languages', None)
+            if languages and isinstance(languages, list):
+                structured_data["languages"] = languages
+                logger.info(f"Detected languages: {languages}")
+            else:
+                # Default to English if language detection not available
+                structured_data["languages"] = ["en"]
+                logger.debug("No language info in prediction, defaulting to English")
+        else:
+            logger.warning(f"Surya OCR returned empty predictions for {image_path}")
 
         processing_time = time.time() - start_time
 
@@ -166,7 +195,7 @@ class OCRService:
             "confidence_score": self._calculate_confidence(structured_data),
             "processing_time_seconds": processing_time,
             "attempt_number": attempt,
-            "success": True
+            "success": True if full_text.strip() else False
         }
 
     def _extract_with_pytesseract(self, image_path: str, attempt: int, start_time: float) -> Dict[str, Any]:
