@@ -50,6 +50,18 @@ if [ ! -d "backend" ]; then
     exit 1
 fi
 
+# Step 0: Quick dependency check (optional)
+echo ""
+print_step "Checking critical dependencies..."
+cd backend
+if python -c "import passlib, bcrypt, sqlalchemy" 2>/dev/null; then
+    print_info "✓ Core dependencies available"
+else
+    print_warn "⚠ Some core dependencies may be missing"
+    echo "  Run: python scripts/check_dependencies.py for details"
+fi
+cd ..
+
 # Step 1: Check infrastructure services
 print_step "Checking infrastructure services..."
 

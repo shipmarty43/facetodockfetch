@@ -19,15 +19,28 @@
 ### Инициализация
 
 ```bash
+# Полная инициализация (рекомендуется)
+./scripts/init_all.sh
+
 # Инициализация базы данных
-python scripts/init_db.py
+cd backend && python scripts/init_db.py
 
 # Инициализация Elasticsearch
-python scripts/init_elasticsearch.py
+cd backend && python scripts/init_elasticsearch.py
 
 # Создание администратора
-python scripts/create_admin.py --username admin --password yourpassword
+cd backend && python scripts/create_admin.py --username admin --password yourpassword
+
+# Проверка зависимостей
+cd backend && python scripts/check_dependencies.py
 ```
+
+**Скрипт check_dependencies.py проверяет:**
+- Установку всех необходимых пакетов
+- Совместимость Surya OCR
+- Доступность bcrypt и passlib
+- Корректность конфигурации
+- GPU/CUDA доступность (если включено)
 
 ---
 

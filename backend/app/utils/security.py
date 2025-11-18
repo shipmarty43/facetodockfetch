@@ -1,9 +1,13 @@
 """Security utilities for encryption and file handling."""
 import hashlib
+import warnings
 from pathlib import Path
 from cryptography.fernet import Fernet
 from passlib.context import CryptContext
 from ..config import settings
+
+# Suppress bcrypt version warning from passlib (bcrypt 4.0+ changed structure)
+warnings.filterwarnings("ignore", message=".*trapped.*error reading bcrypt version.*")
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

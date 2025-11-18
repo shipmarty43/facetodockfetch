@@ -25,29 +25,42 @@ class OCRService:
         """Load Surya OCR model."""
         try:
             # Import Surya OCR (lazy import to avoid loading if not needed)
-            # Try new API first (surya 0.4+)
+            logger.info("Loading Surya OCR models...")
+
+            # Try direct import from surya package
             try:
-                from surya.model.detection.model import load_model as load_det_model, load_processor as load_det_processor
-                from surya.model.recognition.model import load_model as load_rec_model, load_processor as load_rec_processor
+                # Modern surya-ocr API
+                from surya import detection, recognition
 
-                logger.info("Loading Surya OCR models and processors (v0.4+ API)...")
-                self.det_model = load_det_model()
-                self.det_processor = load_det_processor()
-                self.rec_model = load_rec_model()
-                self.rec_processor = load_rec_processor()
-                logger.info("Surya OCR models loaded successfully")
-            except (ImportError, AttributeError) as e:
-                # Fallback to old API (surya < 0.4)
-                logger.info(f"New API failed ({e}), trying legacy API...")
-                from surya.model.detection.segformer import load_model as load_det_model
-                from surya.model.recognition.model import load_model as load_rec_model
+                logger.info("Loading detection and recognition models...")
+                self.det_model = detection.load_model()
+                self.det_processor = detection.load_processor()
+                self.rec_model = recognition.load_model()
+                self.rec_processor = recognition.load_processor()
+                logger.info("Surya OCR models loaded successfully (modern API)")
 
-                logger.info("Loading Surya OCR models (legacy API)...")
-                self.det_model = load_det_model()
-                self.rec_model = load_rec_model()
-                self.det_processor = None
-                self.rec_processor = None
-                logger.info("Surya OCR models loaded successfully (legacy mode)")
+            except (ImportError, AttributeError) as e1:
+                # Try alternative import structure
+                logger.info(f"Modern API failed ({e1}), trying alternative imports...")
+                try:
+                    from surya.detection import load_model as load_det_model, load_processor as load_det_processor
+                    from surya.recognition import load_model as load_rec_model, load_processor as load_rec_processor
+
+                    self.det_model = load_det_model()
+                    self.det_processor = load_det_processor()
+                    self.rec_model = load_rec_model()
+                    self.rec_processor = load_rec_processor()
+                    logger.info("Surya OCR models loaded successfully (alternative API)")
+
+                except (ImportError, AttributeError) as e2:
+                    # Fallback to minimal API without processors
+                    logger.info(f"Alternative API failed ({e2}), trying minimal API...")
+                    logger.warning("Running in degraded mode - OCR may not work optimally")
+                    self.det_model = None
+                    self.det_processor = None
+                    self.rec_model = None
+                    self.rec_processor = None
+
         except Exception as e:
             logger.error(f"Failed to load Surya OCR models: {e}")
             logger.warning("OCR functionality will be limited")
