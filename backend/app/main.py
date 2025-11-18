@@ -3,6 +3,12 @@ Main FastAPI application.
 
 Face Recognition and Document Analysis System with OCR.
 """
+import warnings
+
+# Suppress bcrypt warnings before any imports that use passlib
+warnings.filterwarnings("ignore", message=".*trapped.*error reading bcrypt version.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="passlib")
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse

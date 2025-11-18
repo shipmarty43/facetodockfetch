@@ -5,7 +5,13 @@ Handles environment variables and settings for different modes (debug/production
 from pydantic_settings import BaseSettings
 from typing import Literal
 import os
+import warnings
 from pathlib import Path
+
+# Suppress bcrypt version warning from passlib (bcrypt 4.0+ changed internal structure)
+# This warning is cosmetic and doesn't affect functionality
+warnings.filterwarnings("ignore", message=".*trapped.*error reading bcrypt version.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="passlib")
 
 # Determine project root (2 levels up from this file: backend/app/config.py -> root)
 PROJECT_ROOT = Path(__file__).parent.parent.parent
