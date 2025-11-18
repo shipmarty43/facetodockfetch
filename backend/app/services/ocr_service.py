@@ -23,9 +23,14 @@ class OCRService:
         """Load Surya OCR model."""
         try:
             # Import Surya OCR (lazy import to avoid loading if not needed)
-            from surya.ocr import OCRModel
-            from surya.model.detection.segformer import load_model as load_det_model
-            from surya.model.recognition.model import load_model as load_rec_model
+            # Try new API first (surya 0.4+)
+            try:
+                from surya.model.detection import load_model as load_det_model
+                from surya.model.recognition import load_model as load_rec_model
+            except ImportError:
+                # Fallback to old API
+                from surya.model.detection.segformer import load_model as load_det_model
+                from surya.model.recognition.model import load_model as load_rec_model
 
             logger.info("Loading Surya OCR models...")
             # Load detection and recognition models
@@ -35,6 +40,8 @@ class OCRService:
         except Exception as e:
             logger.error(f"Failed to load Surya OCR models: {e}")
             logger.warning("OCR functionality will be limited")
+            self.det_model = None
+            self.rec_model = None
 
     def extract_text_from_image(
         self,
@@ -57,15 +64,26 @@ class OCRService:
             if self.det_model is None or self.rec_model is None:
                 raise Exception("OCR models not loaded")
 
-            # Import OCR function
-            from surya.ocr import run_ocr
+            # Import OCR function (try both APIs)
+            try:
+                from surya.ocr import run_ocr
+            except ImportError:
+                # Try alternative import
+                from surya import run_ocr
 
             # Load image
             image = Image.open(image_path)
 
             # Run OCR
             logger.info(f"Running OCR on {image_path} (attempt {attempt})")
-            predictions = run_ocr([image], [["en", "ru"]], self.det_model, self.rec_model)
+
+            # Try to run OCR (API may vary by version)
+            try:
+                # New API (0.4+)
+                predictions = run_ocr([image], [["en", "ru"]], self.det_model, self.rec_model)
+            except TypeError:
+                # Older API - different parameters
+                predictions = run_ocr([image], self.det_model, self.rec_model, langs=[["en", "ru"]])
 
             # Extract text and structure
             full_text = ""
