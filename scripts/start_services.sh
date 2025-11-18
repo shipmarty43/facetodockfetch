@@ -28,34 +28,45 @@ if [[ "$CONDA_DEFAULT_ENV" != "face-recognition-system" ]]; then
     exit 1
 fi
 
-# Check Redis
+# Check Redis (Docker container)
 print_info "Checking Redis..."
-if pgrep -x redis-server > /dev/null; then
-    print_info "Redis is already running"
+if redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; then
+    print_info "✓ Redis is running"
+elif docker ps | grep face_recognition_redis > /dev/null 2>&1; then
+    print_info "✓ Redis container is running"
 else
-    print_info "Starting Redis in background..."
-    redis-server --daemonize yes --port 6379
-    sleep 2
-    if pgrep -x redis-server > /dev/null; then
-        print_info "Redis started successfully"
-    else
-        print_warn "Failed to start Redis"
-    fi
+    print_warn "✗ Redis is not running!"
+    echo ""
+    echo "Start infrastructure services with:"
+    echo "  ${GREEN}./scripts/start_infrastructure.sh${NC}"
+    echo ""
+    echo "Or manually:"
+    echo "  docker run -d --name face_recognition_redis -p 6379:6379 redis:7-alpine"
+    echo ""
+    exit 1
 fi
 
-# Check Elasticsearch
+# Check Elasticsearch (Docker container)
 print_info "Checking Elasticsearch..."
 if curl -s http://localhost:9200 > /dev/null 2>&1; then
-    print_info "Elasticsearch is already running"
+    print_info "✓ Elasticsearch is running"
+elif docker ps | grep face_recognition_elasticsearch > /dev/null 2>&1; then
+    print_warn "⚠ Elasticsearch container is running but not ready yet (wait 10-30s)"
+    sleep 5
 else
-    print_warn "Elasticsearch is not running!"
-    echo "Please start Elasticsearch with Docker:"
-    echo "  docker run -d -p 9200:9200 -p 9300:9300 \\"
+    print_warn "✗ Elasticsearch is not running!"
+    echo ""
+    echo "Start infrastructure services with:"
+    echo "  ${GREEN}./scripts/start_infrastructure.sh${NC}"
+    echo ""
+    echo "Or manually:"
+    echo "  docker run -d --name face_recognition_elasticsearch \\"
+    echo "    -p 9200:9200 -p 9300:9300 \\"
     echo "    -e \"discovery.type=single-node\" \\"
     echo "    -e \"xpack.security.enabled=false\" \\"
     echo "    docker.elastic.co/elasticsearch/elasticsearch:8.10.0"
     echo ""
-    read -p "Press Enter to continue once Elasticsearch is running..."
+    exit 1
 fi
 
 # Create log directory
