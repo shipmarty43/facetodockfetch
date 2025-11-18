@@ -4,6 +4,9 @@
 
 set -e
 
+# Suppress bcrypt version warnings globally
+export PYTHONWARNINGS="ignore::UserWarning:passlib"
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

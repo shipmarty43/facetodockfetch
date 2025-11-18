@@ -3,6 +3,9 @@
 
 set -e
 
+# Suppress bcrypt version warnings globally
+export PYTHONWARNINGS="ignore::UserWarning:passlib"
+
 echo "=========================================="
 echo "Starting Face Recognition System Services"
 echo "=========================================="
