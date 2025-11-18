@@ -19,6 +19,7 @@ import {
   Description as DocumentIcon,
   AdminPanelSettings as AdminIcon,
   Logout as LogoutIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material'
 import { logout } from '../../store/authSlice'
 
@@ -33,6 +34,7 @@ export default function Layout() {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Search', icon: <SearchIcon />, path: '/search' },
     { text: 'Documents', icon: <DocumentIcon />, path: '/documents' },
+    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ]
 
   if (user?.role === 'admin') {

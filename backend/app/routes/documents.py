@@ -1,10 +1,12 @@
 """Document management routes."""
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import shutil
 from pathlib import Path
 from datetime import datetime
+import mimetypes
 from ..database import get_db, Document, OCRResult, MRZData, Face, User
 from ..models.documents import (
     DocumentUploadResponse,
@@ -243,6 +245,112 @@ def get_document(
         "faces": faces_data,
         "processing_failures": []
     }
+
+
+@router.get("/{document_id}/file")
+def get_document_file(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the actual document file (image/PDF).
+
+    Returns the file for viewing/download.
+    """
+    document = db.query(Document).filter(Document.id == document_id).first()
+
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+
+    file_path = Path(document.file_path)
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found on disk"
+        )
+
+    # Determine media type
+    mime_type, _ = mimetypes.guess_type(str(file_path))
+    if mime_type is None:
+        mime_type = "application/octet-stream"
+
+    return FileResponse(
+        path=str(file_path),
+        media_type=mime_type,
+        filename=document.original_filename
+    )
+
+
+@router.get("/{document_id}/thumbnail")
+def get_document_thumbnail(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get document thumbnail/preview.
+
+    For images, returns the original file.
+    For PDFs, returns first page as image (if available).
+    """
+    document = db.query(Document).filter(Document.id == document_id).first()
+
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+
+    file_path = Path(document.file_path)
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found on disk"
+        )
+
+    # For images, return the file directly
+    if document.file_type in ["jpg", "jpeg", "png"]:
+        mime_type, _ = mimetypes.guess_type(str(file_path))
+        return FileResponse(
+            path=str(file_path),
+            media_type=mime_type or "image/jpeg"
+        )
+
+    # For PDFs, try to return first page as image
+    # Check if thumbnail exists
+    thumbnail_path = file_path.with_suffix(".thumb.jpg")
+    if thumbnail_path.exists():
+        return FileResponse(
+            path=str(thumbnail_path),
+            media_type="image/jpeg"
+        )
+
+    # Generate thumbnail from PDF
+    try:
+        from pdf2image import convert_from_path
+
+        images = convert_from_path(str(file_path), first_page=1, last_page=1, size=(400, None))
+        if images:
+            images[0].save(str(thumbnail_path), "JPEG", quality=85)
+            return FileResponse(
+                path=str(thumbnail_path),
+                media_type="image/jpeg"
+            )
+    except Exception as e:
+        logger.warning(f"Failed to generate thumbnail for document {document_id}: {e}")
+
+    # Return the PDF itself as fallback
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/pdf",
+        filename=document.original_filename
+    )
 
 
 @router.delete("/{document_id}")

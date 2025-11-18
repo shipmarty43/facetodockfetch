@@ -61,6 +61,34 @@ export const documentsAPI = {
   delete: (id) => api.delete(`/documents/${id}`),
 
   indexDirectory: (data) => api.post('/documents/index-directory', data),
+
+  // Get file URL for viewing
+  getFileUrl: (id) => `/api/v1/documents/${id}/file`,
+
+  // Get thumbnail URL
+  getThumbnailUrl: (id) => `/api/v1/documents/${id}/thumbnail`,
+
+  // Download file
+  downloadFile: async (id, filename) => {
+    const response = await api.get(`/documents/${id}/file`, {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  },
+}
+
+// Settings API
+export const settingsAPI = {
+  getSystemInfo: () => api.get('/admin/stats'),
+
+  getHealth: () => axios.get('/health'),
 }
 
 // Search API
