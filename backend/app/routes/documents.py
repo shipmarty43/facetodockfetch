@@ -107,14 +107,28 @@ async def upload_document(
     db.commit()
     db.refresh(document)
 
-    # Queue for processing
-    process_document_task.delay(document.id)
+    # Queue for processing (with fallback to synchronous if Celery unavailable)
+    processing_mode = "async"
+    try:
+        process_document_task.delay(document.id)
+    except Exception as e:
+        # Celery/Redis not available - process synchronously
+        logger.warning(f"Celery unavailable ({str(e)}), processing document synchronously")
+        processing_mode = "sync"
+        try:
+            # Call the task function directly (bypassing Celery)
+            from ..tasks.document_processing import process_document_sync
+            process_document_sync(document.id)
+        except Exception as proc_error:
+            logger.error(f"Synchronous processing failed: {proc_error}", exc_info=True)
+            document.processing_status = "failed"
+            db.commit()
 
     log_to_database(
         db,
         "INFO",
         "document_uploaded",
-        {"document_id": document.id, "filename": filename},
+        {"document_id": document.id, "filename": filename, "processing_mode": processing_mode},
         user_id=current_user.id
     )
 
@@ -122,7 +136,7 @@ async def upload_document(
         "document_id": document.id,
         "file_hash": file_hash,
         "original_filename": filename,
-        "processing_status": "pending",
+        "processing_status": document.processing_status,
         "message": "Document uploaded and queued for processing",
         "is_duplicate": False
     }
