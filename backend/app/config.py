@@ -7,6 +7,10 @@ from typing import Literal
 import os
 from pathlib import Path
 
+# Determine project root (2 levels up from this file: backend/app/config.py -> root)
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
@@ -71,7 +75,8 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     class Config:
-        env_file = ".env"
+        env_file = str(ENV_FILE)
+        env_file_encoding = 'utf-8'
         case_sensitive = True
 
     @property

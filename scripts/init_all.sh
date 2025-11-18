@@ -94,6 +94,21 @@ print_step "Creating necessary directories..."
 mkdir -p data/uploads data/db data/cache logs models
 print_info "✓ Directories created"
 
+# Step 2.5: Create .env file if not exists
+echo ""
+print_step "Checking .env file..."
+if [ ! -f ".env" ]; then
+    print_info "Creating .env file from .env.example..."
+    cp .env.example .env
+    print_info "✓ .env file created"
+    echo ""
+    echo -e "${YELLOW}⚠ IMPORTANT: Review and update .env file with your settings!${NC}"
+    echo "  Location: $(pwd)/.env"
+    echo ""
+else
+    print_info "✓ .env file already exists"
+fi
+
 # Step 3: Initialize SQLite database
 echo ""
 print_step "Initializing SQLite database..."
