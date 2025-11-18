@@ -15,26 +15,63 @@ class OCRService:
 
     def __init__(self):
         """Initialize OCR service."""
-        self.model = None
-        self.processor = None
-        self._load_model()
+        self.foundation_predictor = None
+        self.det_predictor = None
+        self.rec_predictor = None
+        self._load_predictors()
 
-    def _load_model(self):
-        """Load Surya OCR model."""
+    def _load_predictors(self):
+        """Load Surya OCR predictors."""
         try:
-            # Import Surya OCR (lazy import to avoid loading if not needed)
-            from surya.ocr import OCRModel
-            from surya.model.detection.segformer import load_model as load_det_model
-            from surya.model.recognition.model import load_model as load_rec_model
+            # Import Surya OCR predictors
+            logger.info("Loading Surya OCR predictors...")
 
-            logger.info("Loading Surya OCR models...")
-            # Load detection and recognition models
-            self.det_model = load_det_model()
-            self.rec_model = load_rec_model()
-            logger.info("Surya OCR models loaded successfully")
+            from surya.foundation import FoundationPredictor
+            from surya.detection import DetectionPredictor
+            from surya.recognition import RecognitionPredictor
+            from ..config import settings
+
+            # Set environment variables for Surya configuration
+            if settings.USE_GPU:
+                os.environ['PYTORCH_CUDA_ALLOC_CONF'] = settings.PYTORCH_CUDA_ALLOC_CONF
+                os.environ['CUDA_VISIBLE_DEVICES'] = settings.CUDA_VISIBLE_DEVICES
+                logger.info(f"GPU enabled: CUDA_VISIBLE_DEVICES={settings.CUDA_VISIBLE_DEVICES}")
+
+            # Set batch sizes from settings
+            os.environ['DETECTOR_BATCH_SIZE'] = str(settings.DETECTOR_BATCH_SIZE)
+            os.environ['RECOGNITION_BATCH_SIZE'] = str(settings.RECOGNITION_BATCH_SIZE)
+            os.environ['LAYOUT_BATCH_SIZE'] = str(settings.LAYOUT_BATCH_SIZE)
+
+            # Initialize predictors in correct order
+            logger.info("Initializing foundation predictor...")
+            self.foundation_predictor = FoundationPredictor()
+
+            logger.info("Initializing detection predictor...")
+            self.det_predictor = DetectionPredictor()
+
+            logger.info("Initializing recognition predictor...")
+            self.rec_predictor = RecognitionPredictor(self.foundation_predictor)
+
+            logger.info("✓ Surya OCR predictors loaded successfully")
+            logger.info(f"  Detection threshold: {settings.DETECTOR_TEXT_THRESHOLD}")
+            logger.info(f"  Batch sizes - Detector: {settings.DETECTOR_BATCH_SIZE}, "
+                       f"Recognition: {settings.RECOGNITION_BATCH_SIZE}, "
+                       f"Layout: {settings.LAYOUT_BATCH_SIZE}")
+
+        except ImportError as e:
+            logger.error(f"Failed to import Surya OCR: {e}")
+            logger.error("Make sure surya-ocr is installed: pip install surya-ocr")
+            self.foundation_predictor = None
+            self.det_predictor = None
+            self.rec_predictor = None
         except Exception as e:
-            logger.error(f"Failed to load Surya OCR models: {e}")
+            logger.error(f"Failed to load Surya OCR predictors: {e}")
             logger.warning("OCR functionality will be limited")
+            import traceback
+            traceback.print_exc()
+            self.foundation_predictor = None
+            self.det_predictor = None
+            self.rec_predictor = None
 
     def extract_text_from_image(
         self,
@@ -54,18 +91,18 @@ class OCRService:
         start_time = time.time()
 
         try:
-            if self.det_model is None or self.rec_model is None:
-                raise Exception("OCR models not loaded")
-
-            # Import OCR function
-            from surya.ocr import run_ocr
+            if self.det_predictor is None or self.rec_predictor is None or self.foundation_predictor is None:
+                raise Exception("OCR predictors not loaded")
 
             # Load image
             image = Image.open(image_path)
 
             # Run OCR
             logger.info(f"Running OCR on {image_path} (attempt {attempt})")
-            predictions = run_ocr([image], [["en", "ru"]], self.det_model, self.rec_model)
+
+            # Run recognition (it will use det_predictor internally for detection)
+            # Correct API: rec_predictor([images], det_predictor=detection_predictor)
+            rec_predictions = self.rec_predictor([image], det_predictor=self.det_predictor)
 
             # Extract text and structure
             full_text = ""
@@ -74,27 +111,37 @@ class OCRService:
                 "languages": []
             }
 
-            if predictions and len(predictions) > 0:
-                prediction = predictions[0]
+            if rec_predictions and len(rec_predictions) > 0:
+                prediction = rec_predictions[0]
 
                 # Extract text blocks
-                for text_line in prediction.text_lines:
-                    full_text += text_line.text + "\n"
-                    structured_data["blocks"].append({
-                        "text": text_line.text,
-                        "bbox": text_line.bbox,
-                        "confidence": getattr(text_line, 'confidence', 1.0)
-                    })
+                if hasattr(prediction, 'text_lines'):
+                    for text_line in prediction.text_lines:
+                        text = text_line.text if hasattr(text_line, 'text') else str(text_line)
+                        full_text += text + "\n"
+
+                        # Get bounding box if available
+                        bbox = text_line.bbox if hasattr(text_line, 'bbox') else None
+                        confidence = getattr(text_line, 'confidence', 1.0)
+
+                        structured_data["blocks"].append({
+                            "text": text,
+                            "bbox": bbox,
+                            "confidence": confidence
+                        })
 
                 # Detect languages
-                structured_data["languages"] = prediction.languages if hasattr(prediction, 'languages') else ["unknown"]
+                if hasattr(prediction, 'languages'):
+                    structured_data["languages"] = prediction.languages
+                else:
+                    structured_data["languages"] = ["en"]  # Default to English
 
             processing_time = time.time() - start_time
 
             return {
                 "full_text": full_text.strip(),
                 "structured_data": structured_data,
-                "language_detected": structured_data["languages"][0] if structured_data["languages"] else "unknown",
+                "language_detected": structured_data["languages"][0] if structured_data["languages"] else "en",
                 "confidence_score": self._calculate_confidence(structured_data),
                 "processing_time_seconds": processing_time,
                 "attempt_number": attempt,
@@ -103,6 +150,8 @@ class OCRService:
 
         except Exception as e:
             logger.error(f"OCR failed (attempt {attempt}): {e}")
+            import traceback
+            traceback.print_exc()
             processing_time = time.time() - start_time
 
             return {

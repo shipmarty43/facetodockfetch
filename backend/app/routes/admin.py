@@ -6,7 +6,7 @@ from ..database import get_db, User, Document, Face, SystemLog
 from ..models.admin import SystemStats, TaskQueueStatus, ReindexRequest, ReindexResponse, LogsResponse
 from ..models.auth import UserCreate, UserUpdate, UserResponse
 from ..dependencies import require_admin
-from ..utils.auth import get_password_hash
+from ..utils.security import hash_password
 from ..utils.logging import log_to_database
 from pathlib import Path
 import logging
@@ -188,7 +188,7 @@ def create_user(
     # Create user
     user = User(
         username=user_data.username,
-        password_hash=get_password_hash(user_data.password),
+        password_hash=hash_password(user_data.password),
         role=user_data.role,
         is_active=True
     )
@@ -226,7 +226,7 @@ def update_user(
 
     # Update fields
     if user_data.password:
-        user.password_hash = get_password_hash(user_data.password)
+        user.password_hash = hash_password(user_data.password)
     if user_data.role:
         user.role = user_data.role
     if user_data.is_active is not None:

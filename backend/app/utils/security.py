@@ -1,8 +1,16 @@
 """Security utilities for encryption and file handling."""
 import hashlib
+import warnings
 from pathlib import Path
 from cryptography.fernet import Fernet
+from passlib.context import CryptContext
 from ..config import settings
+
+# Suppress bcrypt version warning from passlib (bcrypt 4.0+ changed structure)
+warnings.filterwarnings("ignore", message=".*trapped.*error reading bcrypt version.*")
+
+# Password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def calculate_file_hash(file_path: str) -> str:
@@ -60,3 +68,38 @@ def sanitize_filename(filename: str) -> str:
     for char in dangerous_chars:
         filename = filename.replace(char, '_')
     return filename
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    # Ensure password is a string and strip whitespace
+    if not isinstance(password, str):
+        password = str(password)
+
+    password = password.strip()
+
+    # Validate password length
+    if not password:
+        raise ValueError("Password cannot be empty")
+
+    # Check byte length (bcrypt has 72-byte limit)
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        raise ValueError(f"Password is too long ({len(password_bytes)} bytes). Maximum is 72 bytes.")
+
+    try:
+        return pwd_context.hash(password)
+    except Exception as e:
+        raise ValueError(f"Password hashing failed: {str(e)}")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against a hash."""
+    # Strip whitespace for consistency with hash_password
+    if isinstance(plain_password, str):
+        plain_password = plain_password.strip()
+
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False

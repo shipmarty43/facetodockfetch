@@ -9,9 +9,12 @@ dependencies:
   - python>=3.10,<3.12
 
   # ML/AI frameworks (используются напрямую)
-  - pytorch::pytorch>=2.0
-  - pytorch::torchvision>=0.15
-  - numpy>=1.24
+  # IMPORTANT: PyTorch and torchvision versions must be compatible
+  # Using specific versions to avoid torchvision::nms operator error
+  - pytorch::pytorch=2.1.2
+  - pytorch::torchvision=0.16.2
+  - pytorch::pytorch-cuda=11.8  # GPU support (CUDA 11.8)
+  - numpy>=1.24,<2.0
 
   # Image processing (используются напрямую: PIL, cv2)
   - pillow>=10.0
@@ -47,7 +50,8 @@ dependencies:
 
     # Security & Auth
     - python-jose[cryptography]>=3.3
-    - passlib[bcrypt]>=1.7
+    - bcrypt>=4.0,<5.0
+    - passlib[bcrypt]>=1.7.4
     - pydantic>=2.5
     - pydantic-settings>=2.1
 
@@ -60,9 +64,9 @@ dependencies:
     - mrz>=0.6
     - pytesseract>=0.3
 
-    # Face Recognition
+    # Face Recognition (GPU-accelerated by default)
     - insightface>=0.7
-    - onnxruntime>=1.16
+    - onnxruntime-gpu>=1.16  # GPU version for better performance
 
     # Testing (опционально)
     - pytest>=7.4
