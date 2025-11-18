@@ -90,44 +90,47 @@ echo ""
 
 # Show status
 echo ""
-print_info "=========================================="
-print_info "Infrastructure services started!"
-print_info "=========================================="
+echo "=========================================="
+echo -e "${GREEN}Infrastructure services started!${NC}"
+echo "=========================================="
 echo ""
 echo "Services:"
-echo "  - Redis: localhost:6379"
-echo "  - Elasticsearch: http://localhost:9200"
+echo -e "  - ${BLUE}Redis:${NC} localhost:6379"
+echo -e "  - ${BLUE}Elasticsearch:${NC} http://localhost:9200"
 echo ""
 echo "Check status:"
-echo "  ${GREEN}$COMPOSE_CMD -f docker-compose.infrastructure.yml ps${NC}"
+echo -e "  ${GREEN}$COMPOSE_CMD -f docker-compose.infrastructure.yml ps${NC}"
 echo ""
 echo "View logs:"
-echo "  ${GREEN}$COMPOSE_CMD -f docker-compose.infrastructure.yml logs -f${NC}"
+echo -e "  ${GREEN}$COMPOSE_CMD -f docker-compose.infrastructure.yml logs -f${NC}"
 echo ""
 echo "Stop services:"
-echo "  ${GREEN}./scripts/stop_infrastructure.sh${NC}"
+echo -e "  ${GREEN}./scripts/stop_infrastructure.sh${NC}"
 echo ""
 
 # Test connections
 print_step "Testing connections..."
 if redis-cli ping > /dev/null 2>&1; then
-    print_info "✓ Redis connection: OK"
+    echo -e "  ${GREEN}✓${NC} Redis connection: OK"
 else
-    print_warn "⚠ Cannot connect to Redis (redis-cli not installed?)"
-    echo "  Install: sudo apt-get install redis-tools"
+    echo -e "  ${YELLOW}⚠${NC} Cannot connect to Redis (redis-cli not installed?)"
+    echo "    Install: sudo apt-get install redis-tools"
 fi
 
 if curl -s http://localhost:9200 > /dev/null 2>&1; then
-    print_info "✓ Elasticsearch connection: OK"
     ES_VERSION=$(curl -s http://localhost:9200 | grep -o '"number" : "[^"]*"' | cut -d'"' -f4)
-    echo "  Version: $ES_VERSION"
+    echo -e "  ${GREEN}✓${NC} Elasticsearch connection: OK"
+    echo -e "    Version: ${BLUE}$ES_VERSION${NC}"
 else
-    print_error "✗ Cannot connect to Elasticsearch"
+    echo -e "  ${RED}✗${NC} Cannot connect to Elasticsearch"
 fi
 
 echo ""
-print_info "Ready for native backend/frontend!"
+echo "=========================================="
+echo -e "${GREEN}Ready for native backend/frontend!${NC}"
+echo "=========================================="
+echo ""
 echo "Next steps:"
-echo "  1. ${GREEN}conda activate face-recognition-system${NC}"
-echo "  2. ${GREEN}./scripts/start_services.sh${NC}"
+echo -e "  1. ${GREEN}conda activate face-recognition-system${NC}"
+echo -e "  2. ${GREEN}./scripts/start_services.sh${NC}"
 echo ""
