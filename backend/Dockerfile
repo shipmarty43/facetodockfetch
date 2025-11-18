@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libxrender-dev \
+    libssl-dev \
+    libffi-dev \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,6 +35,9 @@ RUN conda env create -f environment.yml && \
 
 # Activate environment
 SHELL ["conda", "run", "-n", "face-recognition-system", "/bin/bash", "-c"]
+
+# Reinstall cryptography from source to ensure OpenSSL compatibility
+RUN pip install --no-cache-dir --force-reinstall --no-binary cryptography cryptography
 
 # Verify installation
 RUN python -c "import torch; import fastapi; import insightface; print('Conda environment OK')"

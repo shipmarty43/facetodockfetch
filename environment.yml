@@ -27,7 +27,8 @@ dependencies:
   - sqlalchemy>=2.0
 
   # Authentication & Security
-  - cryptography>=41.0
+  - cffi>=1.15
+  - cryptography>=41.0,<43.0
 
   # Task queue
   - redis-py>=5.0
