@@ -120,59 +120,69 @@ print_success "✓ Директории созданы"
 echo ""
 
 # ==========================================
-# STEP 3: Start Infrastructure (Docker)
+# STEP 3: Start Infrastructure (Docker) - OPTIONAL
 # ==========================================
 print_step "Шаг 3/5: Запуск инфраструктуры (Redis + Elasticsearch)"
 
+DOCKER_AVAILABLE=false
+
 # Check Docker
 if ! command -v docker &> /dev/null; then
-    print_error "Docker не установлен!"
-    echo "Установите Docker: https://docs.docker.com/get-docker/"
-    exit 1
-fi
-
-# Detect docker-compose command
-if command -v docker-compose &> /dev/null; then
-    COMPOSE_CMD="docker-compose"
-elif docker compose version &> /dev/null 2>&1; then
-    COMPOSE_CMD="docker compose"
+    print_warn "Docker не установлен - пропускаем Redis и Elasticsearch"
+    print_info "Система будет работать в ограниченном режиме:"
+    print_info "  ✓ Логин и авторизация работают"
+    print_info "  ✓ Базовый API работает"
+    print_info "  ✗ Celery задачи недоступны (нужен Redis)"
+    print_info "  ✗ Поиск по лицам ограничен (нужен Elasticsearch)"
+    echo ""
 else
-    print_error "docker-compose недоступен!"
-    exit 1
+    # Detect docker-compose command
+    if command -v docker-compose &> /dev/null; then
+        COMPOSE_CMD="docker-compose"
+        DOCKER_AVAILABLE=true
+    elif docker compose version &> /dev/null 2>&1; then
+        COMPOSE_CMD="docker compose"
+        DOCKER_AVAILABLE=true
+    else
+        print_warn "docker-compose недоступен - пропускаем инфраструктуру"
+        DOCKER_AVAILABLE=false
+    fi
 fi
 
-print_info "Используется: $COMPOSE_CMD"
+if [ "$DOCKER_AVAILABLE" = true ]; then
+    print_info "Используется: $COMPOSE_CMD"
 
-# Stop existing containers
-print_info "Остановка существующих контейнеров..."
-$COMPOSE_CMD -f docker-compose.infrastructure.yml down 2>/dev/null || true
+    # Stop existing containers
+    print_info "Остановка существующих контейнеров..."
+    $COMPOSE_CMD -f docker-compose.infrastructure.yml down 2>/dev/null || true
 
-# Start infrastructure
-print_info "Запуск Redis и Elasticsearch..."
-$COMPOSE_CMD -f docker-compose.infrastructure.yml up -d
+    # Start infrastructure
+    print_info "Запуск Redis и Elasticsearch..."
+    $COMPOSE_CMD -f docker-compose.infrastructure.yml up -d
 
-# Wait for Redis
-print_info "Ожидание готовности Redis..."
-for i in {1..30}; do
-    if docker exec face_recognition_redis redis-cli ping > /dev/null 2>&1; then
-        print_success "✓ Redis готов"
-        break
-    fi
-    sleep 1
-done
+    # Wait for Redis
+    print_info "Ожидание готовности Redis..."
+    for i in {1..30}; do
+        if docker exec face_recognition_redis redis-cli ping > /dev/null 2>&1; then
+            print_success "✓ Redis готов"
+            break
+        fi
+        sleep 1
+    done
 
-# Wait for Elasticsearch
-print_info "Ожидание готовности Elasticsearch (может занять 30-60 сек)..."
-for i in {1..60}; do
-    if curl -s http://localhost:9200 > /dev/null 2>&1; then
-        ES_VERSION=$(curl -s http://localhost:9200 | grep -o '"number" : "[^"]*"' | cut -d'"' -f4)
-        print_success "✓ Elasticsearch готов (версия: $ES_VERSION)"
-        break
-    fi
-    echo -n "."
-    sleep 2
-done
-echo ""
+    # Wait for Elasticsearch
+    print_info "Ожидание готовности Elasticsearch (может занять 30-60 сек)..."
+    for i in {1..60}; do
+        if curl -s http://localhost:9200 > /dev/null 2>&1; then
+            ES_VERSION=$(curl -s http://localhost:9200 | grep -o '"number" : "[^"]*"' | cut -d'"' -f4)
+            print_success "✓ Elasticsearch готов (версия: $ES_VERSION)"
+            break
+        fi
+        echo -n "."
+        sleep 2
+    done
+    echo ""
+fi
 
 # ==========================================
 # STEP 4: Initialize Database and Services
