@@ -19,6 +19,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
+  Snackbar,
 } from '@mui/material'
 import { CloudUpload, Delete, Visibility } from '@mui/icons-material'
 import { useDropzone } from 'react-dropzone'
@@ -30,6 +32,7 @@ export default function Documents() {
   const [rowsPerPage, setRowsPerPage] = useState(50)
   const [uploadDialog, setUploadDialog] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState(null)
+  const [uploadResult, setUploadResult] = useState(null)
 
   const dispatch = useDispatch()
   const { documents, total, loading } = useSelector((state) => state.documents)
@@ -54,13 +57,43 @@ export default function Documents() {
   }
 
   const onDrop = async (acceptedFiles) => {
+    const results = {
+      success: 0,
+      duplicates: 0,
+      errors: 0,
+      total: acceptedFiles.length
+    }
+
     for (const file of acceptedFiles) {
       try {
-        await documentsAPI.upload(file)
+        const response = await documentsAPI.upload(file)
+        if (response.data.is_duplicate) {
+          results.duplicates++
+        } else {
+          results.success++
+        }
       } catch (error) {
         console.error('Upload failed:', error)
+        results.errors++
       }
     }
+
+    // Show results to user
+    let message = ''
+    let severity = 'success'
+
+    if (results.errors > 0) {
+      severity = 'error'
+      message = `${results.errors} file(s) failed to upload. `
+    }
+    if (results.duplicates > 0) {
+      message += `${results.duplicates} duplicate(s) skipped. `
+    }
+    if (results.success > 0) {
+      message += `${results.success} file(s) uploaded successfully.`
+    }
+
+    setUploadResult({ message, severity })
     setUploadDialog(false)
     loadDocuments()
   }
@@ -193,6 +226,22 @@ export default function Documents() {
           <Button onClick={() => setUploadDialog(false)}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Upload result notification */}
+      <Snackbar
+        open={!!uploadResult}
+        autoHideDuration={6000}
+        onClose={() => setUploadResult(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setUploadResult(null)}
+          severity={uploadResult?.severity || 'success'}
+          sx={{ width: '100%' }}
+        >
+          {uploadResult?.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }
