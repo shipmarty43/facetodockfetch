@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     # GPU/CUDA Settings
     USE_GPU: bool = False
     CUDA_VISIBLE_DEVICES: str = "0"
+    PYTORCH_CUDA_ALLOC_CONF: str = "expandable_segments:True"
+
+    # Surya OCR Settings
+    DETECTOR_TEXT_THRESHOLD: float = 0.2
+    DETECTOR_BATCH_SIZE: int = 8
+    RECOGNITION_BATCH_SIZE: int = 15
+    LAYOUT_BATCH_SIZE: int = 52
 
     # Logging (use absolute path)
     LOG_LEVEL: str = "DEBUG"

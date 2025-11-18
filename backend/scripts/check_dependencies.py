@@ -67,20 +67,26 @@ def main():
     surya_ok = check_dependency("Surya OCR", "import surya")
 
     if surya_ok:
-        # Try to import specific modules
-        print("  Checking Surya submodules:")
+        # Try to import specific predictors
+        print("  Checking Surya predictors:")
         try:
-            from surya import detection, recognition
-            print("    ✓ detection and recognition modules")
-        except ImportError as e:
-            print(f"    ✗ detection/recognition: {e}")
+            from surya.detection import DetectionPredictor
+            from surya.recognition import RecognitionPredictor
+            print("    ✓ DetectionPredictor and RecognitionPredictor")
+
+            # Try to instantiate (may take time)
             try:
-                from surya.detection import load_model
-                from surya.recognition import load_model
-                print("    ✓ Alternative import structure")
-            except ImportError as e2:
-                print(f"    ✗ Alternative imports: {e2}")
-                all_ok = False
+                print("    Testing predictor initialization...")
+                det = DetectionPredictor()
+                print("    ✓ DetectionPredictor instantiated")
+                rec = RecognitionPredictor()
+                print("    ✓ RecognitionPredictor instantiated")
+            except Exception as e:
+                print(f"    ⚠ Predictor initialization: {e}")
+                print("    (This may be due to missing models - they will be downloaded on first use)")
+        except ImportError as e:
+            print(f"    ✗ Predictor imports failed: {e}")
+            all_ok = False
     else:
         all_ok = False
 
@@ -101,6 +107,16 @@ def main():
         print(f"  Mode: {settings.MODE}")
         print(f"  Database: {settings.DATABASE_URL}")
         print(f"  USE_GPU: {settings.USE_GPU}")
+
+        # Check Surya OCR settings
+        print(f"\n  Surya OCR configuration:")
+        print(f"    DETECTOR_TEXT_THRESHOLD: {settings.DETECTOR_TEXT_THRESHOLD}")
+        print(f"    DETECTOR_BATCH_SIZE: {settings.DETECTOR_BATCH_SIZE}")
+        print(f"    RECOGNITION_BATCH_SIZE: {settings.RECOGNITION_BATCH_SIZE}")
+        print(f"    LAYOUT_BATCH_SIZE: {settings.LAYOUT_BATCH_SIZE}")
+        if settings.USE_GPU:
+            print(f"    CUDA_VISIBLE_DEVICES: {settings.CUDA_VISIBLE_DEVICES}")
+            print(f"    PYTORCH_CUDA_ALLOC_CONF: {settings.PYTORCH_CUDA_ALLOC_CONF}")
     except Exception as e:
         print(f"✗ Config failed: {e}")
         all_ok = False

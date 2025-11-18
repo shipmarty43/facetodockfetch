@@ -138,6 +138,8 @@ facetodockfetch/
 ├── environment.yml        # Conda environment
 ├── GPU_SETUP.md          # GPU руководство
 ├── SCRIPTS.md            # Руководство по скриптам
+├── SURYA_OCR_CONFIG.md   # Настройка Surya OCR
+├── ENV_CONFIGURATION.md  # Конфигурация окружения
 └── README.md
 ```
 
@@ -171,6 +173,8 @@ Swagger UI: http://localhost:30000/docs
 **Infrastructure:** Docker, Redis, Elasticsearch, Nginx
 **GPU:** CUDA 11.8, PyTorch, ONNX Runtime GPU
 **Package Management:** Conda (гибкое управление зависимостями, автоматическое разрешение конфликтов версий)
+
+📖 **Настройка Surya OCR:** [SURYA_OCR_CONFIG.md](SURYA_OCR_CONFIG.md) - детальное руководство по параметрам OCR, оптимизации производительности и troubleshooting
 
 ## Производительность
 
