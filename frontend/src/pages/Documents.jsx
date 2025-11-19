@@ -38,6 +38,7 @@ export default function Documents() {
   const [docDetails, setDocDetails] = useState(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [uploadResult, setUploadResult] = useState(null)
+  const [filePreviewUrl, setFilePreviewUrl] = useState(null)
 
   const dispatch = useDispatch()
   const { documents, total, loading } = useSelector((state) => state.documents)
@@ -50,10 +51,25 @@ export default function Documents() {
   useEffect(() => {
     if (selectedDoc) {
       loadDocumentDetails(selectedDoc.id)
+      loadFilePreview(selectedDoc.id)
     } else {
       setDocDetails(null)
+      // Clean up blob URL
+      if (filePreviewUrl) {
+        URL.revokeObjectURL(filePreviewUrl)
+        setFilePreviewUrl(null)
+      }
     }
   }, [selectedDoc])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (filePreviewUrl) {
+        URL.revokeObjectURL(filePreviewUrl)
+      }
+    }
+  }, [filePreviewUrl])
 
   const loadDocuments = async () => {
     dispatch(setLoading(true))
@@ -79,6 +95,17 @@ export default function Documents() {
       console.error('Failed to load document details:', error)
     } finally {
       setDetailsLoading(false)
+    }
+  }
+
+  const loadFilePreview = async (id) => {
+    try {
+      const response = await documentsAPI.getFileBlob(id)
+      const url = URL.createObjectURL(response.data)
+      setFilePreviewUrl(url)
+    } catch (error) {
+      console.error('Failed to load file preview:', error)
+      setFilePreviewUrl(null)
     }
   }
 
@@ -315,11 +342,11 @@ export default function Documents() {
                     bgcolor: 'grey.100',
                   }}
                 >
-                  {selectedDoc && (
+                  {selectedDoc && filePreviewUrl ? (
                     selectedDoc.file_type === 'pdf' ? (
                       <Box sx={{ width: '100%', height: 400 }}>
                         <iframe
-                          src={`${documentsAPI.getFileUrl(selectedDoc.id)}#toolbar=0`}
+                          src={`${filePreviewUrl}#toolbar=0`}
                           width="100%"
                           height="100%"
                           style={{ border: 'none' }}
@@ -328,7 +355,7 @@ export default function Documents() {
                       </Box>
                     ) : (
                       <img
-                        src={documentsAPI.getFileUrl(selectedDoc.id)}
+                        src={filePreviewUrl}
                         alt={selectedDoc.original_filename}
                         style={{
                           maxWidth: '100%',

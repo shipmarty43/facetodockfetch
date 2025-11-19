@@ -3,9 +3,15 @@ import logging
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 import time
+import os
+
+# Fix multiprocessing issues with Celery fork - must be set BEFORE importing torch/surya
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+
 from PIL import Image
 from pdf2image import convert_from_path
-import os
 
 logger = logging.getLogger(__name__)
 

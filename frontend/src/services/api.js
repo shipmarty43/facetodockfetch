@@ -62,11 +62,16 @@ export const documentsAPI = {
 
   indexDirectory: (data) => api.post('/documents/index-directory', data),
 
-  // Get file URL for viewing
+  // Get file URL for viewing (requires auth header)
   getFileUrl: (id) => `/api/v1/documents/${id}/file`,
 
   // Get thumbnail URL
   getThumbnailUrl: (id) => `/api/v1/documents/${id}/thumbnail`,
+
+  // Get file as blob (with auth)
+  getFileBlob: (id) => api.get(`/documents/${id}/file`, {
+    responseType: 'blob'
+  }),
 
   // Download file
   downloadFile: async (id, filename) => {
