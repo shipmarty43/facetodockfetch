@@ -364,6 +364,8 @@ export default function Documents() {
                         }}
                       />
                     )
+                  ) : (
+                    <CircularProgress />
                   )}
                 </Paper>
               </Grid>
