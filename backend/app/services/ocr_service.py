@@ -3,9 +3,15 @@ import logging
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 import time
+import os
+
+# Fix multiprocessing issues with Celery fork - must be set BEFORE importing torch/surya
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+
 from PIL import Image
 from pdf2image import convert_from_path
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +48,9 @@ class OCRService:
             os.environ['RECOGNITION_BATCH_SIZE'] = str(settings.RECOGNITION_BATCH_SIZE)
             os.environ['LAYOUT_BATCH_SIZE'] = str(settings.LAYOUT_BATCH_SIZE)
 
+            # Set detection threshold
+            os.environ['DETECTOR_TEXT_THRESHOLD'] = str(settings.DETECTOR_TEXT_THRESHOLD)
+
             # Initialize predictors in correct order
             logger.info("Initializing foundation predictor...")
             self.foundation_predictor = FoundationPredictor()
@@ -53,22 +62,21 @@ class OCRService:
             self.rec_predictor = RecognitionPredictor(self.foundation_predictor)
 
             logger.info("✓ Surya OCR predictors loaded successfully")
+            logger.info(f"  Supported OCR languages: {settings.OCR_LANGUAGES}")
             logger.info(f"  Detection threshold: {settings.DETECTOR_TEXT_THRESHOLD}")
             logger.info(f"  Batch sizes - Detector: {settings.DETECTOR_BATCH_SIZE}, "
                        f"Recognition: {settings.RECOGNITION_BATCH_SIZE}, "
                        f"Layout: {settings.LAYOUT_BATCH_SIZE}")
 
         except ImportError as e:
-            logger.error(f"Failed to import Surya OCR: {e}")
-            logger.error("Make sure surya-ocr is installed: pip install surya-ocr")
+            logger.warning(f"Surya OCR not available: {e}")
+            logger.info("Falling back to pytesseract OCR")
             self.foundation_predictor = None
             self.det_predictor = None
             self.rec_predictor = None
         except Exception as e:
-            logger.error(f"Failed to load Surya OCR predictors: {e}")
-            logger.warning("OCR functionality will be limited")
-            import traceback
-            traceback.print_exc()
+            logger.warning(f"Failed to load Surya OCR predictors: {e}")
+            logger.info("Falling back to pytesseract OCR")
             self.foundation_predictor = None
             self.det_predictor = None
             self.rec_predictor = None
@@ -79,7 +87,7 @@ class OCRService:
         attempt: int = 1
     ) -> Dict[str, Any]:
         """
-        Extract text from an image using Surya OCR.
+        Extract text from an image using Surya OCR or pytesseract fallback.
 
         Args:
             image_path: Path to the image file
@@ -91,62 +99,12 @@ class OCRService:
         start_time = time.time()
 
         try:
-            if self.det_predictor is None or self.rec_predictor is None or self.foundation_predictor is None:
-                raise Exception("OCR predictors not loaded")
-
-            # Load image
-            image = Image.open(image_path)
-
-            # Run OCR
-            logger.info(f"Running OCR on {image_path} (attempt {attempt})")
-
-            # Run recognition (it will use det_predictor internally for detection)
-            # Correct API: rec_predictor([images], det_predictor=detection_predictor)
-            rec_predictions = self.rec_predictor([image], det_predictor=self.det_predictor)
-
-            # Extract text and structure
-            full_text = ""
-            structured_data = {
-                "blocks": [],
-                "languages": []
-            }
-
-            if rec_predictions and len(rec_predictions) > 0:
-                prediction = rec_predictions[0]
-
-                # Extract text blocks
-                if hasattr(prediction, 'text_lines'):
-                    for text_line in prediction.text_lines:
-                        text = text_line.text if hasattr(text_line, 'text') else str(text_line)
-                        full_text += text + "\n"
-
-                        # Get bounding box if available
-                        bbox = text_line.bbox if hasattr(text_line, 'bbox') else None
-                        confidence = getattr(text_line, 'confidence', 1.0)
-
-                        structured_data["blocks"].append({
-                            "text": text,
-                            "bbox": bbox,
-                            "confidence": confidence
-                        })
-
-                # Detect languages
-                if hasattr(prediction, 'languages'):
-                    structured_data["languages"] = prediction.languages
-                else:
-                    structured_data["languages"] = ["en"]  # Default to English
-
-            processing_time = time.time() - start_time
-
-            return {
-                "full_text": full_text.strip(),
-                "structured_data": structured_data,
-                "language_detected": structured_data["languages"][0] if structured_data["languages"] else "en",
-                "confidence_score": self._calculate_confidence(structured_data),
-                "processing_time_seconds": processing_time,
-                "attempt_number": attempt,
-                "success": True
-            }
+            # Try Surya OCR if available
+            if self.det_predictor is not None and self.rec_predictor is not None and self.foundation_predictor is not None:
+                return self._extract_with_surya(image_path, attempt, start_time)
+            else:
+                # Fallback to pytesseract
+                return self._extract_with_pytesseract(image_path, attempt, start_time)
 
         except Exception as e:
             logger.error(f"OCR failed (attempt {attempt}): {e}")
@@ -164,6 +122,137 @@ class OCRService:
                 "success": False,
                 "error": str(e)
             }
+
+    def _extract_with_surya(self, image_path: str, attempt: int, start_time: float) -> Dict[str, Any]:
+        """Extract text using Surya OCR."""
+        # Load image
+        image = Image.open(image_path)
+
+        # Run OCR
+        logger.info(f"Running Surya OCR on {image_path} (attempt {attempt})")
+
+        # Run recognition (it will use det_predictor internally for detection)
+        # Correct API for Surya OCR 0.9.0+: rec_predictor([images], det_predictor=detection_predictor)
+        rec_predictions = self.rec_predictor([image], det_predictor=self.det_predictor)
+
+        # Extract text and structure
+        full_text = ""
+        structured_data = {
+            "blocks": [],
+            "languages": []
+        }
+
+        if rec_predictions and len(rec_predictions) > 0:
+            prediction = rec_predictions[0]
+            logger.debug(f"Surya OCR prediction type: {type(prediction)}")
+
+            # Extract text blocks
+            # Check if text_lines exists and is not empty
+            text_lines = getattr(prediction, 'text_lines', [])
+            if text_lines:
+                logger.info(f"Found {len(text_lines)} text lines in image")
+                for idx, text_line in enumerate(text_lines):
+                    # Get text content
+                    text = getattr(text_line, 'text', str(text_line))
+                    if not text:
+                        continue
+
+                    full_text += text + "\n"
+
+                    # Get bounding box if available
+                    bbox = getattr(text_line, 'bbox', None)
+                    # Convert bbox to list if it's a different type
+                    if bbox is not None and not isinstance(bbox, (list, dict)):
+                        try:
+                            bbox = list(bbox)
+                        except:
+                            bbox = None
+
+                    # Get confidence score
+                    confidence = getattr(text_line, 'confidence', 1.0)
+
+                    structured_data["blocks"].append({
+                        "text": text,
+                        "bbox": bbox,
+                        "confidence": confidence
+                    })
+            else:
+                logger.warning(f"No text lines found in Surya OCR prediction for {image_path}")
+
+            # Detect languages from prediction if available
+            # Note: Surya OCR may not always return languages in prediction object
+            languages = getattr(prediction, 'languages', None)
+            if languages and isinstance(languages, list):
+                structured_data["languages"] = languages
+                logger.info(f"Detected languages: {languages}")
+            else:
+                # Default to English if language detection not available
+                structured_data["languages"] = ["en"]
+                logger.debug("No language info in prediction, defaulting to English")
+        else:
+            logger.warning(f"Surya OCR returned empty predictions for {image_path}")
+
+        processing_time = time.time() - start_time
+
+        return {
+            "full_text": full_text.strip(),
+            "structured_data": structured_data,
+            "language_detected": structured_data["languages"][0] if structured_data["languages"] else "en",
+            "confidence_score": self._calculate_confidence(structured_data),
+            "processing_time_seconds": processing_time,
+            "attempt_number": attempt,
+            "success": True if full_text.strip() else False
+        }
+
+    def _extract_with_pytesseract(self, image_path: str, attempt: int, start_time: float) -> Dict[str, Any]:
+        """Extract text using pytesseract as fallback."""
+        import pytesseract
+
+        logger.info(f"Running pytesseract OCR on {image_path} (attempt {attempt})")
+
+        # Load image
+        image = Image.open(image_path)
+
+        # Get detailed OCR data (includes confidence and position)
+        ocr_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+
+        # Extract full text
+        full_text = pytesseract.image_to_string(image)
+
+        # Build structured data from pytesseract output
+        structured_data = {
+            "blocks": [],
+            "languages": ["en"]  # pytesseract doesn't auto-detect language easily
+        }
+
+        # Group text by line
+        n_boxes = len(ocr_data['text'])
+        for i in range(n_boxes):
+            text = ocr_data['text'][i].strip()
+            if text:  # Only include non-empty text
+                conf = int(ocr_data['conf'][i]) if ocr_data['conf'][i] != -1 else 0
+                structured_data["blocks"].append({
+                    "text": text,
+                    "bbox": {
+                        "x": ocr_data['left'][i],
+                        "y": ocr_data['top'][i],
+                        "width": ocr_data['width'][i],
+                        "height": ocr_data['height'][i]
+                    },
+                    "confidence": conf / 100.0  # Convert to 0-1 range
+                })
+
+        processing_time = time.time() - start_time
+
+        return {
+            "full_text": full_text.strip(),
+            "structured_data": structured_data,
+            "language_detected": "en",
+            "confidence_score": self._calculate_confidence(structured_data),
+            "processing_time_seconds": processing_time,
+            "attempt_number": attempt,
+            "success": True
+        }
 
     def _calculate_confidence(self, structured_data: Dict) -> float:
         """Calculate average confidence from OCR results."""
@@ -193,7 +282,7 @@ class OCRService:
         try:
             # Convert PDF to images
             logger.info(f"Converting PDF to images: {pdf_path}")
-            images = convert_from_path(pdf_path)
+            images = convert_from_path(pdf_path, dpi=200)
 
             all_text = ""
             all_blocks = []
@@ -205,7 +294,7 @@ class OCRService:
                 logger.info(f"Processing page {i+1}/{len(images)}")
 
                 # Save temporary image
-                temp_image_path = f"/tmp/page_{i}.jpg"
+                temp_image_path = f"/tmp/page_{i}_{os.getpid()}.jpg"
                 image.save(temp_image_path, "JPEG")
 
                 # Extract text from page
@@ -213,7 +302,8 @@ class OCRService:
 
                 if page_result["success"]:
                     all_text += f"\n--- Page {i+1} ---\n" + page_result["full_text"]
-                    all_blocks.extend(page_result["structured_data"]["blocks"])
+                    if page_result["structured_data"] and page_result["structured_data"].get("blocks"):
+                        all_blocks.extend(page_result["structured_data"]["blocks"])
                     total_confidence += page_result["confidence_score"]
                     if page_result["language_detected"]:
                         languages.add(page_result["language_detected"])
@@ -241,6 +331,8 @@ class OCRService:
 
         except Exception as e:
             logger.error(f"PDF OCR failed (attempt {attempt}): {e}")
+            import traceback
+            traceback.print_exc()
             processing_time = time.time() - start_time
 
             return {

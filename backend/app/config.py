@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     DETECTOR_BATCH_SIZE: int = 8
     RECOGNITION_BATCH_SIZE: int = 15
     LAYOUT_BATCH_SIZE: int = 52
+    # Default OCR languages (comma-separated, e.g., "en,ru,de")
+    OCR_LANGUAGES: str = "en,ru"
 
     # Logging (use absolute path)
     LOG_LEVEL: str = "DEBUG"
@@ -111,6 +113,11 @@ class Settings(BaseSettings):
     def max_upload_size_bytes(self) -> int:
         """Convert max upload size to bytes."""
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+    @property
+    def ocr_languages_list(self) -> list[str]:
+        """Parse OCR languages into a list."""
+        return [lang.strip() for lang in self.OCR_LANGUAGES.split(",")]
 
     def ensure_directories(self):
         """Create necessary directories if they don't exist."""

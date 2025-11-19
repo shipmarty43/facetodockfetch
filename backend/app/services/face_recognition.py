@@ -21,10 +21,11 @@ class FaceRecognitionService:
         """
         self.model = None
         self.model_name = model_name
+        self.opencv_cascade = None  # Initialize OpenCV cascade attribute
         self._load_model()
 
     def _load_model(self):
-        """Load InsightFace model with GPU support if available."""
+        """Load InsightFace model with GPU support if available, or use OpenCV fallback."""
         try:
             import insightface
             from insightface.app import FaceAnalysis
@@ -58,8 +59,27 @@ class FaceRecognitionService:
             self.model.prepare(ctx_id=0, det_size=(640, 640))
             logger.info(f"InsightFace model loaded successfully with providers: {providers}")
         except Exception as e:
-            logger.error(f"Failed to load InsightFace model: {e}")
-            logger.warning("Face recognition functionality will be limited")
+            logger.warning(f"InsightFace not available: {e}")
+            logger.info("Falling back to OpenCV Haar Cascade for face detection")
+            self.model = None
+            self._init_opencv_cascade()
+
+    def _init_opencv_cascade(self):
+        """Initialize OpenCV Haar Cascade for fallback face detection."""
+        try:
+            # Load pre-trained Haar Cascade classifier
+            cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            self.opencv_cascade = cv2.CascadeClassifier(cascade_path)
+
+            if self.opencv_cascade.empty():
+                raise Exception("Failed to load Haar Cascade")
+
+            logger.info("✓ OpenCV Haar Cascade loaded successfully")
+            logger.warning("⚠ Using basic face detection - no face embeddings will be generated")
+            logger.warning("⚠ Face search functionality will be limited without embeddings")
+        except Exception as e:
+            logger.error(f"Failed to load OpenCV Haar Cascade: {e}")
+            self.opencv_cascade = None
 
     def detect_faces(
         self,
@@ -67,7 +87,7 @@ class FaceRecognitionService:
         min_confidence: float = 0.5
     ) -> List[Dict[str, Any]]:
         """
-        Detect faces in an image.
+        Detect faces in an image using InsightFace or OpenCV fallback.
 
         Args:
             image_path: Path to the image
@@ -77,54 +97,115 @@ class FaceRecognitionService:
             List of detected faces with embeddings and metadata
         """
         try:
-            if self.model is None:
-                raise Exception("Face recognition model not loaded")
-
-            # Read image
-            img = cv2.imread(image_path)
-            if img is None:
-                raise Exception(f"Failed to read image: {image_path}")
-
-            # Detect faces
-            faces = self.model.get(img)
-
-            results = []
-            for idx, face in enumerate(faces):
-                # Filter by confidence
-                if face.det_score < min_confidence:
-                    continue
-
-                # Extract face embedding (512D vector for buffalo_l)
-                embedding = face.embedding
-
-                # Calculate quality score
-                quality = self._calculate_face_quality(face)
-
-                # Get bounding box
-                bbox = face.bbox.astype(int)
-
-                results.append({
-                    "face_index": idx,
-                    "embedding": embedding.tolist(),
-                    "bbox": {
-                        "x": int(bbox[0]),
-                        "y": int(bbox[1]),
-                        "width": int(bbox[2] - bbox[0]),
-                        "height": int(bbox[3] - bbox[1])
-                    },
-                    "confidence": float(face.det_score),
-                    "quality_score": quality,
-                    "landmarks": face.kps.tolist() if hasattr(face, 'kps') else None,
-                    "age": int(face.age) if hasattr(face, 'age') else None,
-                    "gender": face.gender if hasattr(face, 'gender') else None
-                })
-
-            logger.info(f"Detected {len(results)} faces in {image_path}")
-            return results
+            # Try InsightFace if available
+            if self.model is not None:
+                return self._detect_with_insightface(image_path, min_confidence)
+            # Fallback to OpenCV Haar Cascade
+            elif hasattr(self, 'opencv_cascade') and self.opencv_cascade is not None:
+                return self._detect_with_opencv(image_path, min_confidence)
+            else:
+                logger.error("No face detection method available")
+                return []
 
         except Exception as e:
             logger.error(f"Face detection failed: {e}")
+            import traceback
+            traceback.print_exc()
             return []
+
+    def _detect_with_insightface(self, image_path: str, min_confidence: float) -> List[Dict[str, Any]]:
+        """Detect faces using InsightFace."""
+        # Read image
+        img = cv2.imread(image_path)
+        if img is None:
+            raise Exception(f"Failed to read image: {image_path}")
+
+        # Detect faces
+        faces = self.model.get(img)
+
+        results = []
+        for idx, face in enumerate(faces):
+            # Filter by confidence
+            if face.det_score < min_confidence:
+                continue
+
+            # Extract face embedding (512D vector for buffalo_l)
+            embedding = face.embedding
+
+            # Calculate quality score
+            quality = self._calculate_face_quality(face)
+
+            # Get bounding box
+            bbox = face.bbox.astype(int)
+
+            results.append({
+                "face_index": idx,
+                "embedding": embedding.tolist(),
+                "bbox": {
+                    "x": int(bbox[0]),
+                    "y": int(bbox[1]),
+                    "width": int(bbox[2] - bbox[0]),
+                    "height": int(bbox[3] - bbox[1])
+                },
+                "confidence": float(face.det_score),
+                "quality_score": quality,
+                "landmarks": face.kps.tolist() if hasattr(face, 'kps') else None,
+                "age": int(face.age) if hasattr(face, 'age') else None,
+                "gender": face.gender if hasattr(face, 'gender') else None
+            })
+
+        logger.info(f"Detected {len(results)} faces with InsightFace in {image_path}")
+        return results
+
+    def _detect_with_opencv(self, image_path: str, min_confidence: float) -> List[Dict[str, Any]]:
+        """Detect faces using OpenCV Haar Cascade (fallback - no embeddings)."""
+        # Read image
+        img = cv2.imread(image_path)
+        if img is None:
+            raise Exception(f"Failed to read image: {image_path}")
+
+        # Convert to grayscale for Haar Cascade
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Detect faces
+        faces = self.opencv_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(30, 30)
+        )
+
+        results = []
+        for idx, (x, y, w, h) in enumerate(faces):
+            # Generate a dummy embedding (zeros) since we can't extract real embeddings
+            # This allows the system to work but face search won't be accurate
+            dummy_embedding = [0.0] * 512
+
+            # Estimate quality based on size (larger faces = better quality)
+            img_height, img_width = img.shape[:2]
+            face_area = w * h
+            image_area = img_width * img_height
+            quality = min(face_area / (300 * 300), 1.0)  # Normalize to 300x300 reference
+
+            results.append({
+                "face_index": idx,
+                "embedding": dummy_embedding,  # Dummy embedding
+                "bbox": {
+                    "x": int(x),
+                    "y": int(y),
+                    "width": int(w),
+                    "height": int(h)
+                },
+                "confidence": 0.8,  # Haar Cascade doesn't provide confidence, use default
+                "quality_score": float(quality),
+                "landmarks": None,
+                "age": None,
+                "gender": None
+            })
+
+        logger.info(f"Detected {len(results)} faces with OpenCV in {image_path}")
+        logger.warning(f"⚠ Face embeddings are dummy values - search will not work accurately")
+        return results
 
     def _calculate_face_quality(self, face) -> float:
         """

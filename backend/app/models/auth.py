@@ -33,7 +33,7 @@ class UserResponse(BaseModel):
     created_at: datetime
     last_login: Optional[datetime]
     is_active: bool
-    settings: Optional[dict]
+    settings_json: Optional[dict] = None
 
     class Config:
         from_attributes = True

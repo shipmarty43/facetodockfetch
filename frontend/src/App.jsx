@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Search from './pages/Search'
 import Documents from './pages/Documents'
+import Settings from './pages/Settings'
 import Admin from './pages/Admin'
 import Layout from './components/Common/Layout'
 
@@ -39,6 +40,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="search" element={<Search />} />
           <Route path="documents" element={<Documents />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="admin" element={
             <ProtectedRoute adminOnly>
               <Admin />
